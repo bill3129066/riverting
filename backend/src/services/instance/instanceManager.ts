@@ -266,7 +266,7 @@ class RealAgentRunner {
           model: this.skillConfig.model || 'gemini-2.0-flash',
           generationConfig: {
             temperature: this.skillConfig.temperature ?? 0.3,
-            maxOutputTokens: 200,
+            maxOutputTokens: 1024,
           },
           systemInstruction: this.skillConfig.systemPrompt,
         })
