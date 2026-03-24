@@ -179,6 +179,7 @@ export default function UploadSkillPage() {
         description: form.description,
         category: form.category,
         systemPrompt,
+        rawSystemPrompt: systemPrompt !== form.systemPrompt ? form.systemPrompt : undefined,
         userPromptTemplate: form.userPromptTemplate || undefined,
         model: form.model,
         temperature: parseFloat(form.temperature),
@@ -239,6 +240,7 @@ export default function UploadSkillPage() {
         description: parsed.description,
         category: importCategory,
         systemPrompt: masterPrompt,
+        rawSystemPrompt: parsed.systemPrompt,
         userPromptTemplate: 'Analyze: {{query}}\n\nChain: {{chain}}\nTarget address (if any): {{address}}',
         model: 'gemini-2.0-flash',
         temperature: 0.2,
@@ -255,7 +257,9 @@ export default function UploadSkillPage() {
       created++
 
       // Create individual pattern skills
-      for (const pattern of processedPatterns) {
+      for (let i = 0; i < processedPatterns.length; i++) {
+        const pattern = processedPatterns[i]
+        const originalPattern = patternFiles[i]
         const patternAuth = await signAction(signMessageAsync, address, 'create-skill')
         const patternName = pattern.name
           .replace(/-/g, ' ')
@@ -266,6 +270,7 @@ export default function UploadSkillPage() {
           description: `${patternName} — sub-skill from ${parsed.name}`,
           category: importCategory,
           systemPrompt: pattern.content.slice(0, 8000),
+          rawSystemPrompt: originalPattern?.content,
           userPromptTemplate: '{{query}}\n\nTarget: {{address}}\nChain: {{chain}}',
           model: 'gemini-2.0-flash',
           temperature: 0.2,

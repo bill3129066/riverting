@@ -47,6 +47,7 @@ export interface SkillRow {
   description: string;
   category: string;
   system_prompt: string;
+  raw_system_prompt: string | null;
   user_prompt_template: string | null;
   model: string;
   temperature: number;
@@ -70,6 +71,7 @@ export interface CreateSkillInput {
   description: string;
   category?: string;
   systemPrompt: string;
+  rawSystemPrompt?: string;
   userPromptTemplate?: string;
   model?: string;
   temperature?: number;

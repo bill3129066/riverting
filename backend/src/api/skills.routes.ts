@@ -59,6 +59,17 @@ skillsRoutes.get('/:id', (c) => {
   return c.json(skill)
 })
 
+// Get raw (uncompressed) system prompt
+skillsRoutes.get('/:id/raw', (c) => {
+  const skill = getSkillById(c.req.param('id'))
+  if (!skill) return c.json({ error: 'Skill not found' }, 404)
+  return c.json({
+    raw_system_prompt: skill.raw_system_prompt || skill.system_prompt,
+    system_prompt: skill.system_prompt,
+    has_raw: !!skill.raw_system_prompt,
+  })
+})
+
 // Get skill stats
 skillsRoutes.get('/:id/stats', (c) => {
   const stats = getSkillStats(c.req.param('id'))
@@ -132,6 +143,7 @@ skillsRoutes.post('/',
       description,
       category: body.category,
       systemPrompt,
+      rawSystemPrompt: body.rawSystemPrompt,
       userPromptTemplate: body.userPromptTemplate,
       model: body.model,
       temperature: body.temperature,

@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS skills (
   description TEXT NOT NULL,
   category TEXT DEFAULT 'general',
   system_prompt TEXT NOT NULL,
+  raw_system_prompt TEXT,
   user_prompt_template TEXT,
   model TEXT DEFAULT 'gemini-2.0-flash',
   temperature REAL DEFAULT 0.3,

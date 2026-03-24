@@ -34,11 +34,11 @@ export function createSkill(input: CreateSkillInput): SkillRow {
 
   db.prepare(`
     INSERT INTO skills (id, agent_id, creator_wallet, name, description, category,
-      system_prompt, user_prompt_template, model, temperature, max_tokens,
+      system_prompt, raw_system_prompt, user_prompt_template, model, temperature, max_tokens,
       tools_json, input_schema_json, price_per_run, rate_per_second,
       execution_mode, metadata_uri)
     VALUES ($id, $agentId, $creatorWallet, $name, $description, $category,
-      $systemPrompt, $userPromptTemplate, $model, $temperature, $maxTokens,
+      $systemPrompt, $rawSystemPrompt, $userPromptTemplate, $model, $temperature, $maxTokens,
       $toolsJson, $inputSchemaJson, $pricePerRun, $ratePerSecond,
       $executionMode, $metadataUri)
   `).run({
@@ -49,6 +49,7 @@ export function createSkill(input: CreateSkillInput): SkillRow {
     $description: input.description,
     $category: input.category ?? 'general',
     $systemPrompt: input.systemPrompt,
+    $rawSystemPrompt: input.rawSystemPrompt ?? null,
     $userPromptTemplate: input.userPromptTemplate ?? null,
     $model: input.model ?? 'gemini-2.0-flash',
     $temperature: input.temperature ?? 0.3,
