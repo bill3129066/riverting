@@ -115,11 +115,17 @@ function seedSkillsFromDir(): number {
   const insert = db.prepare(`
     INSERT INTO skills (id, creator_wallet, name, description, category,
       system_prompt, user_prompt_template, model, temperature, max_tokens,
-      input_schema_json, price_per_run, execution_mode, metadata_uri)
+      input_schema_json, tools_json, price_per_run, execution_mode, metadata_uri)
     VALUES ($id, $creator, $name, $desc, $category,
       $systemPrompt, $userPromptTemplate, $model, $temperature, $maxTokens,
-      $inputSchema, $price, $mode, $metadataUri)
+      $inputSchema, $toolsJson, $price, $mode, $metadataUri)
   `);
+
+  // RPC tools config for DeFi/Security skills
+  const RPC_TOOLS = JSON.stringify({
+    type: 'rpc',
+    methods: ['eth_blockNumber', 'eth_getBalance', 'eth_getCode', 'eth_call', 'eth_getLogs', 'eth_getStorageAt', 'eth_getTransactionReceipt', 'eth_getBlockByNumber'],
+  });
 
   const CURATOR = '0x0000000000000000000000000000000000000000';
   const defaultSchema = JSON.stringify({
@@ -146,6 +152,9 @@ function seedSkillsFromDir(): number {
       const category = inferCategory(parsed.name, parsed.description);
       const displayName = parsed.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
+      // Enable RPC tools for defi and security skills
+      const enableTools = ['defi', 'security'].includes(category)
+
       // Master skill from SKILL.md
       insert.run({
         $id: randomUUID(),
@@ -157,8 +166,9 @@ function seedSkillsFromDir(): number {
         $userPromptTemplate: '{{query}}\n\nChain: {{chain}}\nTarget: {{address}}',
         $model: 'gemini-2.0-flash',
         $temperature: 0.2,
-        $maxTokens: 2048,
+        $maxTokens: enableTools ? 4096 : 2048,
         $inputSchema: defaultSchema,
+        $toolsJson: enableTools ? RPC_TOOLS : null,
         $price: 5000,
         $mode: 'stream',
         $metadataUri: null,
@@ -181,13 +191,14 @@ function seedSkillsFromDir(): number {
           $creator: CURATOR,
           $name: firstLine,
           $desc: `${firstLine} — from ${displayName} skill pack`,
-          $category: category,  // inherit from master
+          $category: category,
           $systemPrompt: content.slice(0, 8000),
           $userPromptTemplate: '{{query}}\n\nTarget: {{address}}\nChain: {{chain}}',
           $model: 'gemini-2.0-flash',
           $temperature: 0.2,
-          $maxTokens: 2048,
+          $maxTokens: enableTools ? 4096 : 2048,
           $inputSchema: defaultSchema,
+          $toolsJson: enableTools ? RPC_TOOLS : null,
           $price: 3000,
           $mode: 'once',
           $metadataUri: null,

@@ -82,6 +82,8 @@ export default function SkillDetailPage() {
   const [depositing, setDepositing] = useState(false)
   const [userRating, setUserRating] = useState<number | null>(null)
   const [ratingHover, setRatingHover] = useState(0)
+  const [toolActivity, setToolActivity] = useState<string[]>([])
+  const [toolCallCount, setToolCallCount] = useState(0)
 
   useEffect(() => {
     fetchSkill(id).then(setSkill).catch(console.error).finally(() => setLoading(false))
@@ -147,6 +149,8 @@ export default function SkillDetailPage() {
     setError('')
     setOutput(null)
     setExecStats(null)
+    setToolActivity([])
+    setToolCallCount(0)
 
     try {
       const auth = await signAction(signMessageAsync, address, 'run-skill', id)
@@ -159,6 +163,11 @@ export default function SkillDetailPage() {
           (text) => setOutput(prev => (prev || '') + text),
           (stats) => setExecStats({ durationMs: stats.durationMs, tokensUsed: stats.tokensUsed }),
           (err) => setError(err),
+          (calls) => setToolActivity(prev => [...prev, ...calls.map(c => `Calling ${c.name}...`)]),
+          (results, total) => {
+            setToolCallCount(total)
+            setToolActivity(prev => [...prev, ...results.map(r => `${r.name} ${r.hasError ? 'failed' : 'done'}`)])
+          },
         )
       } else {
         // Once mode
@@ -294,10 +303,26 @@ export default function SkillDetailPage() {
                   {output}
                   {running && <span className="inline-block w-2 h-4 bg-[#00d4aa] ml-0.5 animate-pulse" />}
                 </div>
+                {/* Tool activity log */}
+                {toolActivity.length > 0 && (
+                  <div className="mt-3 border-t border-[#222] pt-2">
+                    <p className="text-xs text-[#666] mb-1">RPC Calls ({toolCallCount})</p>
+                    <div className="flex flex-wrap gap-1">
+                      {toolActivity.slice(-10).map((a, i) => (
+                        <span key={i} className={`text-xs px-1.5 py-0.5 rounded ${
+                          a.includes('failed') ? 'bg-red-500/10 text-red-400' :
+                          a.includes('done') ? 'bg-green-500/10 text-green-400' :
+                          'bg-[#222] text-[#888]'
+                        }`}>{a}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {execStats && (
                   <div className="flex gap-4 mt-3 text-xs text-[#666]">
                     <span>{execStats.durationMs}ms</span>
                     {execStats.tokensUsed && <span>{execStats.tokensUsed} tokens</span>}
+                    {toolCallCount > 0 && <span>{toolCallCount} RPC calls</span>}
                   </div>
                 )}
               </div>

@@ -109,8 +109,10 @@ export async function runSkillStream(
   inputs: Record<string, unknown>,
   auth: SignedHeaders,
   onChunk: (text: string) => void,
-  onComplete: (stats: { executionId: string; durationMs: number; tokensUsed: number | null }) => void,
+  onComplete: (stats: { executionId: string; durationMs: number; tokensUsed: number | null; toolCallCount?: number }) => void,
   onError: (error: string) => void,
+  onToolUse?: (calls: Array<{ name: string; args: unknown }>) => void,
+  onToolResult?: (results: Array<{ name: string; hasError: boolean }>, totalCalls: number) => void,
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/api/skills/${id}/stream`, {
     method: 'POST',
@@ -146,6 +148,8 @@ export async function runSkillStream(
         if (currentEvent === 'chunk') onChunk(data.text)
         else if (currentEvent === 'complete') onComplete(data)
         else if (currentEvent === 'error') onError(data.error)
+        else if (currentEvent === 'tool_use' && onToolUse) onToolUse(data.calls)
+        else if (currentEvent === 'tool_result' && onToolResult) onToolResult(data.results, data.totalCalls)
       }
     }
   }
