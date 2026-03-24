@@ -1,32 +1,26 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAccount } from 'wagmi'
+import { useConnectModal } from '@rainbow-me/rainbowkit'
 import { PLATFORM_FEE, formatRate } from '@/lib/utils'
+import { createSession } from '@/lib/api'
 
 export default function AgentDetailModal({ agent, onClose }: { agent: any; onClose: () => void }) {
   const router = useRouter()
+  const { isConnected, address } = useAccount()
+  const { openConnectModal } = useConnectModal()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const totalRate = agent.curator_rate_per_second + PLATFORM_FEE
 
-  async function handleStart() {
+  // TODO: Add SIWE verification for production
+  // TODO: Add USDC balance check for production
+  async function handleStartSession() {
     setLoading(true)
     setError(null)
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-      const onchainId = Date.now()
-      const res = await fetch(`${apiBase}/api/sessions/${onchainId}/spawn`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agentId: agent.id,
-          totalRate,
-          curatorRate: agent.curator_rate_per_second,
-          platformFee: PLATFORM_FEE,
-        }),
-      })
-      if (!res.ok) throw new Error(`Server error ${res.status}`)
-      const { sessionId } = await res.json()
+      const { sessionId } = await createSession(agent.id, address!, agent.curator_rate_per_second)
       router.push(`/session/${sessionId}`)
     } catch (e: any) {
       setError(e.message || 'Failed to start session')
@@ -44,7 +38,7 @@ export default function AgentDetailModal({ agent, onClose }: { agent: any; onClo
             </span>
             <h2 className="font-display font-bold text-3xl text-text-primary">{agent.name}</h2>
           </div>
-          <button onClick={onClose} className="text-text-tertiary hover:text-text-primary text-3xl leading-none font-light" aria-label="Close modal">&times;</button>
+          <button type="button" onClick={onClose} className="text-text-tertiary hover:text-text-primary text-3xl leading-none font-light" aria-label="Close modal">&times;</button>
         </div>
 
         <p className="text-text-secondary mb-12 text-lg leading-relaxed">{agent.description}</p>
@@ -70,13 +64,24 @@ export default function AgentDetailModal({ agent, onClose }: { agent: any; onClo
 
         {error && <p className="text-error text-sm mb-4 bg-error/10 p-3 border border-error/20">{error}</p>}
 
-        <button
-          onClick={handleStart}
-          disabled={loading}
-          className="w-full bg-text-primary text-surface font-bold py-4 uppercase tracking-widest text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Starting...' : 'Start Session \u2192'}
-        </button>
+        {!isConnected ? (
+          <button
+            type="button"
+            onClick={() => openConnectModal?.()}
+            className="w-full bg-text-primary text-surface font-bold py-4 uppercase tracking-widest text-sm hover:bg-accent transition-colors"
+          >
+            Connect Wallet to Start
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleStartSession}
+            disabled={loading}
+            className="w-full bg-text-primary text-surface font-bold py-4 uppercase tracking-widest text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Starting\u2026' : 'Start Session \u2192'}
+          </button>
+        )}
       </div>
     </div>
   )
