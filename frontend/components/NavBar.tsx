@@ -22,8 +22,16 @@ export function NavBar() {
             >
               Browse Agents
             </Link>
-            <Link 
-              href="/curator" 
+            <Link
+              href="/sessions"
+              className={`text-sm font-medium transition-colors ${
+                pathname?.startsWith('/sessions') ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
+              }`}
+            >
+              My Sessions
+            </Link>
+            <Link
+              href="/curator"
               className={`text-sm font-medium transition-colors ${
                 pathname?.startsWith('/curator') ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
               }`}

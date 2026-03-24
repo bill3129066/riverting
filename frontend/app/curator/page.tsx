@@ -10,6 +10,7 @@ export default function CuratorPage() {
   const { address } = useAccount()
   const [agents, setAgents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [removing, setRemoving] = useState<number | null>(null)
 
   useEffect(() => {
     fetchAgents()
@@ -19,6 +20,25 @@ export default function CuratorPage() {
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [address])
+
+  async function handleRemove(agentId: number) {
+    if (!address || !confirm('確定要下架這個 Agent？此操作無法復原。')) return
+    setRemoving(agentId)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+      const res = await fetch(`${apiBase}/api/agents/${agentId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ curatorWallet: address }),
+      })
+      if (!res.ok) throw new Error('Failed to remove agent')
+      setAgents(prev => prev.filter(a => a.id !== agentId))
+    } catch (e: any) {
+      alert(e.message)
+    } finally {
+      setRemoving(null)
+    }
+  }
 
   const totalEarned = 0 // Will be populated from settlement service
 
@@ -80,6 +100,13 @@ export default function CuratorPage() {
                     {agent.active ? 'Active' : 'Inactive'}
                   </span>
                   <span className="text-[#666] text-sm">$0.0000 earned</span>
+                  <button
+                    onClick={() => handleRemove(agent.id)}
+                    disabled={removing === agent.id}
+                    className="text-xs px-3 py-1 rounded-lg border border-red-800 text-red-400 hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {removing === agent.id ? '下架中...' : '下架'}
+                  </button>
                 </div>
               </div>
             ))}

@@ -12,6 +12,12 @@ export async function fetchAgent(id: string) {
   return res.json()
 }
 
+export async function fetchSessions() {
+  const res = await fetch(`${API_BASE}/api/sessions`)
+  if (!res.ok) throw new Error('Failed to fetch sessions')
+  return res.json()
+}
+
 export async function createSession(agentId: number, userWallet: string) {
   const res = await fetch(`${API_BASE}/api/sessions/0/spawn`, {
     method: 'POST',

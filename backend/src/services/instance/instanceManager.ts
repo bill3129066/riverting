@@ -1,14 +1,22 @@
 import { getDb } from '../../db/client.js'
 import { sseHub } from '../realtime/sseHub.js'
 import { randomUUID } from 'crypto'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const MAX_CONCURRENT_INSTANCES = 3
+
+interface AgentStep {
+  ts: string
+  kind: string
+  title: string
+  body: string
+}
 
 interface ActiveInstance {
   instanceId: string
   sessionId: string
   agentId: number
-  runner: InlineAgentRunner
+  runner: RealAgentRunner
   status: 'running' | 'paused' | 'stopped'
 }
 
@@ -36,7 +44,7 @@ class InstanceManager {
 
     console.log(`[InstanceManager] Spawning instance ${instanceId} for session ${sessionId}`)
 
-    const runner = new InlineAgentRunner(
+    const runner = new RealAgentRunner(
       { sessionId, agentId, backendUrl, geminiApiKey },
       (step) => {
         const db = getDb()
@@ -47,10 +55,8 @@ class InstanceManager {
 
         try {
           db.prepare(
-            `
-            INSERT INTO session_steps (id, session_id, seq, step_type, title, body, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-          `,
+            `INSERT INTO session_steps (id, session_id, seq, step_type, title, body, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
           ).run(stepId, sessionId, seq, step.kind, step.title, step.body.slice(0, 500))
         } catch (_e) {}
 
@@ -65,7 +71,7 @@ class InstanceManager {
 
         sseHub.emitProof(sessionId, {
           seq,
-          proofHash: `0x${Math.random().toString(16).slice(2).padEnd(64, '0')}`,
+          proofHash: `0x${randomUUID().replace(/-/g, '').padEnd(64, '0')}`,
           ts: new Date().toISOString(),
         })
 
@@ -94,7 +100,6 @@ class InstanceManager {
     instance.status = 'paused'
     instance.runner.pause()
     sseHub.emitStatus(sessionId, 'paused')
-    console.log(`[InstanceManager] Paused instance for session ${sessionId}`)
   }
 
   resumeInstance(sessionId: string) {
@@ -103,7 +108,6 @@ class InstanceManager {
     instance.status = 'running'
     instance.runner.resume()
     sseHub.emitStatus(sessionId, 'active')
-    console.log(`[InstanceManager] Resumed instance for session ${sessionId}`)
   }
 
   stopInstance(sessionId: string) {
@@ -113,19 +117,11 @@ class InstanceManager {
     instance.runner.stop()
     this.instances.delete(sessionId)
     sseHub.emitStatus(sessionId, 'stopped')
-    console.log(`[InstanceManager] Stopped instance for session ${sessionId}`)
   }
 
   getStatus(sessionId: string): string {
     return this.instances.get(sessionId)?.status || 'not_running'
   }
-}
-
-interface AgentStep {
-  ts: string
-  kind: string
-  title: string
-  body: string
 }
 
 interface RunnerConfig {
@@ -135,17 +131,29 @@ interface RunnerConfig {
   geminiApiKey: string
 }
 
-class InlineAgentRunner {
+interface SkillConfig {
+  name: string
+  description?: string
+  systemPrompt?: string
+  githubUrl?: string
+  model?: string
+  temperature?: number
+  analysisTemplates?: string[]
+}
+
+class RealAgentRunner {
   private config: RunnerConfig
   private onStep: (step: AgentStep) => void
   private onProof: (steps: AgentStep[]) => void
   private running = false
+  private paused = false
   private stepBuffer: AgentStep[] = []
   private proofInterval?: ReturnType<typeof setInterval>
   private workInterval?: ReturnType<typeof setInterval>
   private seq = 0
+  private skillConfig?: SkillConfig
+  private genAI?: GoogleGenerativeAI
   stepSeq = 0
-  private paused = false
 
   constructor(
     config: RunnerConfig,
@@ -159,7 +167,13 @@ class InlineAgentRunner {
 
   async start() {
     this.running = true
-    this.emit('commentary', 'Agent starting', `Session ${this.config.sessionId} initialized`)
+    this.skillConfig = await this.loadSkillConfig()
+
+    if (this.config.geminiApiKey) {
+      this.genAI = new GoogleGenerativeAI(this.config.geminiApiKey)
+    }
+
+    this.emit('commentary', 'Agent starting', `Loading ${this.skillConfig.name} for session ${this.config.sessionId}`)
 
     this.proofInterval = setInterval(() => {
       if (!this.running || this.paused) return
@@ -170,47 +184,90 @@ class InlineAgentRunner {
 
     this.workInterval = setInterval(() => {
       if (!this.running || this.paused) return
-      this.runCycle()
-    }, 7000)
+      this.runCycle().catch((e: Error) => {
+        this.emit('commentary', 'Cycle error', e.message)
+      })
+    }, 8000)
 
-    this.runCycle()
+    await this.runCycle()
   }
 
-  private runCycle() {
+  private async loadSkillConfig(): Promise<SkillConfig> {
+    try {
+      const res = await fetch(`${this.config.backendUrl}/api/agents/${this.config.agentId}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const agent = await res.json()
+      const raw = typeof agent.skill_config_json === 'string'
+        ? JSON.parse(agent.skill_config_json)
+        : agent.skill_config_json
+      return {
+        name: agent.name,
+        description: agent.description,
+        systemPrompt: raw.systemPrompt || `You are ${agent.name}. ${agent.description}. Analyze DeFi data and provide clear, concise insights in 2-3 sentences.`,
+        githubUrl: raw.githubUrl || agent.metadata_uri,
+        model: raw.model || 'gemini-2.0-flash',
+        temperature: raw.temperature ?? 0.3,
+        analysisTemplates: raw.analysisTemplates || ['pool-snapshot'],
+      }
+    } catch (e) {
+      console.warn(`[RealAgentRunner] Failed to load skill config: ${(e as Error).message}`)
+      return {
+        name: 'DeFi Analyst',
+        systemPrompt: 'You are a DeFi analyst. Analyze pool data and provide clear, concise insights in 2-3 sentences.',
+        model: 'gemini-2.0-flash',
+        temperature: 0.3,
+        analysisTemplates: ['pool-snapshot'],
+      }
+    }
+  }
+
+  private async runCycle() {
     this.seq++
-    const templates = ['pool-snapshot', 'yield-compare']
-    const template = templates[this.seq % templates.length]
+    const template = this.skillConfig?.analysisTemplates?.[this.seq % (this.skillConfig.analysisTemplates.length || 1)] || 'pool-snapshot'
 
-    this.emit('api', 'OnchainOS Market API', `Fetching ${template} data (cycle ${this.seq})`)
+    this.emit('api', `Fetching data (cycle ${this.seq})`, `Running ${template} analysis`)
 
-    setTimeout(() => {
-      if (!this.running) return
-      this.emit(
-        'rpc',
-        'X Layer RPC',
-        `Reading block ${Math.floor(Math.random() * 100000) + 12900000}`,
-      )
-    }, 500)
+    const mockData = this.getMockData(template)
+    this.emit('rpc', 'Reading on-chain state', `Block: ${Math.floor(Math.random() * 1_000_000) + 12_000_000}`)
+    this.emit('metric', 'Metrics computed', mockData.metrics)
 
-    setTimeout(() => {
-      if (!this.running) return
-      const metrics =
-        template === 'pool-snapshot'
-          ? `TVL: $${(2.1 + Math.random() * 0.6).toFixed(1)}M | Vol: $${(150 + Math.random() * 60).toFixed(0)}K | Fee: 0.3%`
-          : `Pool A: ${(3.8 + Math.random() * 1.5).toFixed(1)}% APY | Pool B: ${(4.5 + Math.random() * 2).toFixed(1)}% APY`
-      this.emit('metric', 'Metrics computed', metrics)
-    }, 1200)
+    if (this.genAI && this.skillConfig) {
+      try {
+        const model = this.genAI.getGenerativeModel({
+          model: this.skillConfig.model || 'gemini-2.0-flash',
+          generationConfig: {
+            temperature: this.skillConfig.temperature ?? 0.3,
+            maxOutputTokens: 200,
+          },
+          systemInstruction: this.skillConfig.systemPrompt,
+        })
+        const prompt = `Analyze this DeFi data and provide a 2-sentence insight:\n\nMetrics: ${mockData.metrics}\n\nBe specific and actionable.`
+        const result = await model.generateContent(prompt)
+        const analysis = result.response.text()
+        if (analysis) {
+          this.emit('finding', 'AI Analysis', analysis)
+          return
+        }
+      } catch (e) {
+        console.warn(`[RealAgentRunner] Gemini error: ${(e as Error).message}`)
+      }
+    }
 
-    setTimeout(() => {
-      if (!this.running) return
-      const findings = [
-        'Liquidity depth is healthy — spread within normal range for current volatility.',
-        'Volume/TVL ratio suggests active trading. Fee capture opportunity is favorable.',
-        'Pool B offers better risk-adjusted yield based on 24h data.',
-        'No significant impermanent loss risk detected at current price range.',
-      ]
-      this.emit('finding', 'Analysis complete', findings[this.seq % findings.length])
-    }, 2500)
+    // Fallback if no API key or error
+    this.emit('finding', 'Analysis result', mockData.summary)
+  }
+
+  private getMockData(template: string) {
+    if (template === 'pool-snapshot') {
+      return {
+        metrics: `TVL: $${(2.1 + Math.random() * 0.6).toFixed(1)}M | Vol: $${(150 + Math.random() * 60).toFixed(0)}K | Fee: 0.3%`,
+        summary: 'Pool shows healthy trading activity with balanced liquidity depth.',
+      }
+    }
+    return {
+      metrics: `Yield A: ${(3.8 + Math.random() * 1.5).toFixed(1)}% APY | Yield B: ${(4.5 + Math.random() * 2).toFixed(1)}% APY`,
+      summary: 'Option B offers better risk-adjusted yield based on current metrics.',
+    }
   }
 
   private emit(kind: string, title: string, body: string) {
@@ -219,18 +276,14 @@ class InlineAgentRunner {
     this.onStep(step)
   }
 
-  pause() {
-    this.paused = true
-  }
-
-  resume() {
-    this.paused = false
-  }
+  pause() { this.paused = true }
+  resume() { this.paused = false }
 
   stop() {
     this.running = false
     if (this.proofInterval) clearInterval(this.proofInterval)
     if (this.workInterval) clearInterval(this.workInterval)
+    this.emit('commentary', 'Agent stopped', `Session ${this.config.sessionId} ended`)
   }
 }
 

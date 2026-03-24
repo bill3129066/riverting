@@ -15,7 +15,7 @@ export default function NewAgentPage() {
     description: '',
     category: 'defi',
     curatorRatePerSecond: '1000',
-    systemPrompt: '',
+    githubUrl: '',
     analysisTemplate: 'pool-snapshot',
   })
 
@@ -28,7 +28,7 @@ export default function NewAgentPage() {
     try {
       const skillConfig = {
         name: form.name,
-        systemPrompt: form.systemPrompt || `You are ${form.name}. ${form.description}. Analyze DeFi data and provide clear insights.`,
+        githubUrl: form.githubUrl,
         model: 'gemini-2.0-flash',
         temperature: 0.3,
         tools: [{ type: 'onchainos-market', description: 'Fetch market data' }],
@@ -46,6 +46,7 @@ export default function NewAgentPage() {
           curatorWallet: address,
           curatorRatePerSecond: parseInt(form.curatorRatePerSecond),
           skillConfigJson: JSON.stringify(skillConfig),
+          metadataUri: form.githubUrl,
         }),
       })
 
@@ -127,14 +128,14 @@ export default function NewAgentPage() {
             <p className="text-xs text-[#555] mt-1">Platform adds $0.0003/sec. Users pay ${((parseInt(form.curatorRatePerSecond) + 300) / 1_000_000).toFixed(6)}/sec total.</p>
           </div>
 
-          {/* System Prompt */}
+          {/* GitHub URL */}
           <div>
-            <label htmlFor="agent-prompt" className="block text-sm text-[#888] mb-1.5">System Prompt (optional)</label>
-            <textarea
-              id="agent-prompt"
-              value={form.systemPrompt} onChange={update('systemPrompt')} rows={4}
-              placeholder="Leave blank to use default prompt based on name + description"
-              className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 text-white placeholder-[#444] focus:border-[#00d4aa] outline-none resize-none font-mono text-sm"
+            <label htmlFor="agent-github" className="block text-sm text-[#888] mb-1.5">GitHub Repository URL *</label>
+            <input
+              id="agent-github"
+              type="url" value={form.githubUrl} onChange={update('githubUrl')} required
+              placeholder="https://github.com/your-org/your-agent"
+              className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 text-white placeholder-[#444] focus:border-[#00d4aa] outline-none font-mono text-sm"
             />
           </div>
 
