@@ -1,0 +1,3 @@
+USDC Verified (0x74b7F16337b8972027F6196A17a631aC6dE26d22) returned "USDC". 
+Second contract (0x3e5A5d35F449D5D9beA3Bc75A4be8FCF5E649A2d) failed.
+Verified USDC address on X Layer testnet: 0x74b7F16337b8972027F6196A17a631aC6dE26d22

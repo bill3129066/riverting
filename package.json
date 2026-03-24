@@ -1,0 +1,7 @@
+{
+  "name": "riverting-monorepo",
+  "private": true,
+  "workspaces": [
+    "shared/*"
+  ]
+}
