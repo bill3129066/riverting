@@ -14,3 +14,4 @@
 - `bun:sqlite` `Statement.run()` returns void; use `SELECT last_insert_rowid()` to get insert ID.
 - Add `"types": ["bun-types"]` to tsconfig.json for `bun:sqlite` type resolution.
 - SQLite WAL files (`*.db-shm`, `*.db-wal`) need explicit gitignore patterns — `*.db` alone doesn't catch them.
+- Implemented live session page with Server-Sent Events (SSE) streaming state (agent output, proofs, metrics). Used `crypto.randomUUID()` or unique composite keys for realtime lists.

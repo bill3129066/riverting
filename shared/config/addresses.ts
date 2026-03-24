@@ -1,10 +1,3 @@
-export const ADDRESSES = {
-  testnet: {
-    escrow: "",
-    usdc: "0x74b7F16337b8972027F6196A17a631aC6dE26d22",
-  },
-  mainnet: {
-    escrow: "",
-    usdc: "",
-  },
+export const addresses = {
+  RivertingEscrow: '0x0000000000000000000000000000000000000000' // NOTE: Needs funding to deploy on X Layer
 };

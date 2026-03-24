@@ -288,7 +288,7 @@ Wave FINAL (Verification — after all tasks):
   - Files: `contracts/src/RivertingEscrow.sol`, `contracts/test/RivertingEscrow.t.sol`, `contracts/foundry.toml`
   - Pre-commit: `forge test`
 
-- [ ] 3. RivertingEscrow Contract — Session + Accrual + Proof
+- [x] 3. RivertingEscrow Contract — Session + Accrual + Proof
 
   **What to do**:
   - Add to `RivertingEscrow.sol`:
@@ -369,7 +369,7 @@ Wave FINAL (Verification — after all tasks):
   - Files: `contracts/src/RivertingEscrow.sol`, `contracts/test/RivertingEscrow.t.sol`
   - Pre-commit: `forge test --fuzz-runs 256`
 
-- [ ] 4. Backend Scaffold + DB Schema + Agent Registry API
+- [x] 4. Backend Scaffold + DB Schema + Agent Registry API
 
   **What to do**:
   - Initialize `backend/` package with Hono, TypeScript, better-sqlite3
@@ -434,7 +434,7 @@ Wave FINAL (Verification — after all tasks):
   - Message: `feat(backend): scaffold Hono server with SQLite, agent registry API, and seed data`
   - Files: `backend/**`
 
-- [ ] 5. Frontend Scaffold + Wallet Connect + Page Shells
+- [x] 5. Frontend Scaffold + Wallet Connect + Page Shells
 
   **What to do**:
   - Initialize Next.js 14+ app in `frontend/` with TypeScript
@@ -495,7 +495,7 @@ Wave FINAL (Verification — after all tasks):
   - Message: `feat(frontend): scaffold Next.js app with wallet connect and page shells`
   - Files: `frontend/**`
 
-- [ ] 6. Deploy Contract to X Layer Testnet + Export ABI
+- [x] 6. Deploy Contract to X Layer Testnet + Export ABI
 
   **What to do**:
   - Deploy `RivertingEscrow` to X Layer testnet (Chain ID 1952, RPC: https://testrpc.xlayer.tech)
@@ -514,7 +514,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(contracts): deploy to X Layer testnet and export ABI`
 
-- [ ] 7. Backend Event Watcher + Session Orchestrator
+- [x] 7. Backend Event Watcher + Session Orchestrator
 
   **What to do**:
   - Create `services/onchain/eventWatcher.ts` — watch contract events via X Layer WebSocket
@@ -536,7 +536,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(backend): implement event watcher and session orchestrator`
 
-- [ ] 8. Backend Proof Relayer Service
+- [x] 8. Backend Proof Relayer Service
 
   **What to do**:
   - Create `services/proof/proofBuilder.ts` — build ProofPackage from session steps
@@ -556,7 +556,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(backend): implement proof relayer and timeout watcher`
 
-- [ ] 9. Backend SSE Hub for Real-Time Streaming
+- [x] 9. Backend SSE Hub for Real-Time Streaming
 
   **What to do**:
   - Create `services/realtime/sseHub.ts` — SSE server for streaming events
@@ -574,7 +574,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(backend): implement SSE hub for real-time session streaming`
 
-- [ ] 10. Frontend Marketplace Catalog + Agent Cards
+- [x] 10. Frontend Marketplace Catalog + Agent Cards
 
   **What to do**:
   - Implement `AgentCatalogGrid` — fetches agents from `GET /api/agents`, renders grid
@@ -593,7 +593,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(frontend): implement marketplace catalog with agent cards`
 
-- [ ] 11. Frontend Session Page — Salary Ticker + Proof Timeline
+- [x] 11. Frontend Session Page — Salary Ticker + Proof Timeline
 
   **What to do**:
   - Implement `SalaryTicker` — animated USDC counter, optimistic local increment, resets on chain poll
