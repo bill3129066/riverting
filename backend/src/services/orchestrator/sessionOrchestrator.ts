@@ -1,5 +1,6 @@
 import { getDb } from '../../db/client.js'
 import { randomUUID } from 'crypto'
+import { settlementService } from '../settlement/settlementService.js'
 
 export class SessionOrchestrator {
   async onSessionCreated(args: {
@@ -56,6 +57,14 @@ export class SessionOrchestrator {
     db.prepare(
       "UPDATE sessions SET status = 'stopped', ended_at = datetime('now') WHERE onchain_session_id = ?",
     ).run(Number(args.sessionId))
+
+    const session = db
+      .prepare('SELECT id FROM sessions WHERE onchain_session_id = ?')
+      .get(Number(args.sessionId)) as { id: string } | undefined
+    if (session) {
+      settlementService.recordSessionEarnings(session.id)
+    }
+
     console.log(`[Orchestrator] Session stopped: ${args.sessionId}`)
   }
 
