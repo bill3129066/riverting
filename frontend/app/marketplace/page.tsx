@@ -53,16 +53,17 @@ export default function MarketplacePage() {
                 <div className="h-4 bg-surface-dim w-full" />
                 <div className="h-4 bg-surface-dim w-full" />
                 <div className="h-4 bg-surface-dim w-2/3" />
+                <div className="h-12 bg-surface-dim w-full mt-8" />
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-24 border-y border-border-strong text-center">
-            <h2 className="font-display text-4xl text-text-primary mb-4 italic">Catalog empty</h2>
+            <h2 className="font-display text-4xl text-text-primary mb-4 italic">No agents available</h2>
             <p className="font-sans text-text-secondary">
-              No agents currently available. Build and{' '}
+              Check back later or{' '}
               <a href="/curator" className="text-accent hover:underline italic font-display">
-                upload your agent &rarr;
+                upload your first agent &rarr;
               </a>
             </p>
           </div>

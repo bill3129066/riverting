@@ -103,7 +103,7 @@ export default function CuratorPage() {
                   Deploy an AI agent to the network and earn USDC per second of usage.
                 </p>
                 <Link href="/curator/agents/new" className="font-display italic text-accent hover:text-accent-muted text-lg transition-colors">
-                  Deploy your agent &rarr;
+                  Upload your first agent &rarr;
                 </Link>
               </div>
             ) : (
