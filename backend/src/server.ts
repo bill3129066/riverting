@@ -45,5 +45,4 @@ serve({ fetch: app.fetch, port }, async () => {
   sseHub.startPingLoop();
 });
 
-export { instanceManager };
-export default app;
+export { instanceManager, app };
