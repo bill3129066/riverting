@@ -6,4 +6,14 @@
   body {
     @apply bg-background text-text-primary;
   }
+
+  /* Sharp corners globally */
+  *, *::before, *::after {
+    border-radius: 0 !important;
+  }
+
+  /* Only exception: full-round pills */
+  .rounded-full {
+    border-radius: 9999px !important;
+  }
 }

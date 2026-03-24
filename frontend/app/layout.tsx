@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { DM_Sans, Source_Serif_4 } from 'next/font/google'
+import { Inter, Newsreader } from 'next/font/google'
 import dynamic from 'next/dynamic'
 import './globals.css'
 import { NavBar } from '@/components/NavBar'
@@ -9,19 +9,20 @@ const Providers = dynamic(
   { ssr: false }
 )
 
-const bodyFont = DM_Sans({
+const bodyFont = Inter({
   subsets: ['latin'],
   variable: '--font-body',
 })
 
-const displayFont = Source_Serif_4({
+const displayFont = Newsreader({
   subsets: ['latin'],
   variable: '--font-display',
+  style: ['normal', 'italic'],
 })
 
 export const metadata: Metadata = {
-  title: 'Riverting - AI Agent Marketplace',
-  description: 'AI Agent Marketplace with Streaming Salary',
+  title: 'Riverting — AI Agent Marketplace',
+  description: 'AI Agent Marketplace with Streaming Salary on X Layer',
 }
 
 export default function RootLayout({
@@ -30,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body
         className={`${bodyFont.variable} ${displayFont.variable} font-sans min-h-screen bg-background text-text-primary`}
         suppressHydrationWarning
@@ -38,7 +39,7 @@ export default function RootLayout({
         <Providers>
           <div className="flex flex-col min-h-screen">
             <NavBar />
-            <main className="flex-grow w-full max-w-7xl mx-auto px-6 py-8">
+            <main className="flex-grow w-full">
               {children}
             </main>
           </div>
