@@ -1,0 +1,16 @@
+{
+  "name": "@riverting/agent",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "openai": "^4.67.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "bun-types": "latest"
+  }
+}
