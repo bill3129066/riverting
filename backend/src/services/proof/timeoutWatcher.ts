@@ -1,6 +1,6 @@
 import { getDb } from '../../db/client.js'
 
-const PROOF_WINDOW_MS = 12000
+const PROOF_WINDOW_MS = 30000
 const CHECK_INTERVAL_MS = 5000
 
 export class TimeoutWatcher {

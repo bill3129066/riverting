@@ -26,21 +26,21 @@ export default function SessionPage() {
   const [status, setStatus] = useState<'active' | 'paused' | 'stopped'>('active')
   const [steps, setSteps] = useState<AgentStep[]>([])
   const [proofs, setProofs] = useState<ProofEvent[]>([])
-  const [accrued, setAccrued] = useState(0) // in USDC micro-units
-  const [ratePerSec] = useState(1300) // 0.0013 USDC/sec in micro-units
+  const [accrued, setAccrued] = useState(0)
+  const [ratePerSec] = useState(1300)
   const eventSourceRef = useRef<EventSource | null>(null)
+  const isValidSession = !!id && id !== 'new'
 
-  // Optimistic local ticker
   useEffect(() => {
-    if (status !== 'active') return
+    if (!isValidSession || status !== 'active') return
     const interval = setInterval(() => {
       setAccrued(prev => prev + ratePerSec)
     }, 1000)
     return () => clearInterval(interval)
-  }, [status, ratePerSec])
+  }, [isValidSession, status, ratePerSec])
 
-  // SSE connection
   useEffect(() => {
+    if (!isValidSession) return
     const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
     const connect = () => {
       const es = new EventSource(`${apiBase}/api/sessions/${id}/stream`)
@@ -48,7 +48,7 @@ export default function SessionPage() {
 
       es.addEventListener('step', (e) => {
         const step = JSON.parse(e.data)
-        setSteps(prev => [...prev.slice(-50), step]) // keep last 50
+        setSteps(prev => [...prev.slice(-50), step])
       })
 
       es.addEventListener('proof', (e) => {
@@ -68,13 +68,27 @@ export default function SessionPage() {
 
       es.onerror = () => {
         es.close()
-        setTimeout(connect, 3000) // reconnect after 3s
+        setTimeout(connect, 3000)
       }
     }
 
     connect()
     return () => eventSourceRef.current?.close()
-  }, [id])
+  }, [id, isValidSession])
+
+  if (!isValidSession) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] text-white p-8 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">No Active Session</h1>
+          <p className="text-[#666] mb-6">Browse the marketplace to start a session.</p>
+          <a href="/marketplace" className="bg-[#00d4aa] text-black font-bold px-6 py-3 rounded-xl">
+            Browse Agents →
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-6">

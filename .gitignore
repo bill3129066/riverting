@@ -50,3 +50,10 @@ npm-debug.log*
 *.key
 *.pem
 credentials.json
+
+# Runtime generated
+backend/proof-packages/
+backend/dev.db
+backend/demo.db
+backend/*.db-shm
+backend/*.db-wal
