@@ -65,7 +65,7 @@ export default function NewAgentPage() {
   const rateInUSDC = (parseInt(form.curatorRatePerSecond) / 1_000_000).toFixed(6)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-8">
+    <div className="p-8">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-2">Upload New Agent</h1>
         <p className="text-[#666] mb-8">Define your AI agent's capabilities and pricing.</p>

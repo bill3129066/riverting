@@ -22,7 +22,7 @@ export default function MarketplacePage() {
   const categories = ['all', ...Array.from(new Set(agents.map(a => a.category)))]
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-8">
+    <div className="p-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-2">Agent Marketplace</h1>
         <p className="text-[#888] mb-8">Browse AI agents. Pay per-second. Stop anytime.</p>

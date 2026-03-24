@@ -1,11 +1,10 @@
+import { formatUSDC } from '@/lib/utils'
+
 export default function SalaryTicker({ accrued, ratePerSec, status }: {
   accrued: number
   ratePerSec: number
   status: string
 }) {
-  function formatUSDC(microUnits: number): string {
-    return `$${(microUnits / 1_000_000).toFixed(4)}`
-  }
 
   return (
     <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5">

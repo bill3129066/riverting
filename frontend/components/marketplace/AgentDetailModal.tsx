@@ -1,12 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-
-const PLATFORM_FEE = 300
-
-function formatRate(units: number): string {
-  return `$${(units / 1_000_000).toFixed(4)}/sec`
-}
+import { PLATFORM_FEE, formatRate } from '@/lib/utils'
 
 export default function AgentDetailModal({ agent, onClose }: { agent: any; onClose: () => void }) {
   const router = useRouter()

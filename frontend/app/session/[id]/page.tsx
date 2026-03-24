@@ -132,7 +132,7 @@ export default function SessionPage() {
 
   if (!isValidSession) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white p-8 flex items-center justify-center">
+      <div className="p-8 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">No Active Session</h1>
           <p className="text-[#666] mb-6">Browse the marketplace to start a session.</p>
@@ -145,7 +145,7 @@ export default function SessionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-6">
+    <div className="p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

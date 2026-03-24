@@ -1,10 +1,9 @@
+import { formatRate } from '@/lib/utils'
+
 export default function CostBreakdown({ curatorRate, platformFee }: {
   curatorRate: number
   platformFee: number
 }) {
-  function formatRate(units: number): string {
-    return `$${(units / 1_000_000).toFixed(4)}/sec`
-  }
 
   return (
     <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-4">

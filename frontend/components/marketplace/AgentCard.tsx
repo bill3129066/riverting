@@ -1,3 +1,4 @@
+import { PLATFORM_FEE, formatRate } from '@/lib/utils';
 export interface Agent {
   id: number;
   name: string;
@@ -6,12 +7,6 @@ export interface Agent {
   curator_rate_per_second: number;
   curator_wallet: string;
   active: number;
-}
-
-const PLATFORM_FEE = 300;
-
-function formatRate(units: number): string {
-  return `$${(units / 1_000_000).toFixed(4)}/sec`;
 }
 
 export default function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {

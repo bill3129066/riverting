@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div>
       {/* Hero */}
       <div className="max-w-5xl mx-auto px-8 pt-24 pb-16 text-center">
         <div className="inline-block bg-[#00d4aa]/10 border border-[#00d4aa]/20 text-[#00d4aa] text-xs px-3 py-1 rounded-full mb-6 uppercase tracking-widest">
