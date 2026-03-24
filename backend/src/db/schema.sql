@@ -117,3 +117,22 @@ CREATE TABLE IF NOT EXISTS skill_executions (
 
 CREATE INDEX IF NOT EXISTS idx_executions_skill ON skill_executions(skill_id);
 CREATE INDEX IF NOT EXISTS idx_executions_user ON skill_executions(user_wallet);
+
+CREATE TABLE IF NOT EXISTS skill_ratings (
+  id TEXT PRIMARY KEY,
+  skill_id TEXT NOT NULL REFERENCES skills(id),
+  user_wallet TEXT NOT NULL,
+  rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+  created_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(skill_id, user_wallet)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ratings_skill ON skill_ratings(skill_id);
+
+CREATE TABLE IF NOT EXISTS user_balances (
+  wallet TEXT PRIMARY KEY,
+  balance INTEGER DEFAULT 0,           -- USDC micro-units
+  total_deposited INTEGER DEFAULT 0,
+  total_spent INTEGER DEFAULT 0,
+  updated_at TEXT DEFAULT (datetime('now'))
+);

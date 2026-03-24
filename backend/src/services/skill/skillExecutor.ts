@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSkillById, incrementRunCount } from './skillRegistry.js'
 import { geminiQueue } from './requestQueue.js'
+import { charge, getBalance } from './billing.js'
 import type { SkillRow, SkillExecutionRow } from '../../types/index.js'
 
 interface RunResult {
@@ -56,6 +57,14 @@ export async function runSkillOnce(
   // Validate inputs
   const validationError = validateInputs(skill, inputs)
   if (validationError) throw new Error(validationError)
+
+  // Check balance for paid skills
+  if (skill.price_per_run > 0) {
+    const bal = getBalance(userWallet)
+    if (bal.balance < skill.price_per_run) {
+      throw new Error(`Insufficient balance. Need ${skill.price_per_run} micro-USDC, have ${bal.balance}. Deposit funds first.`)
+    }
+  }
 
   const db = getDb()
   const executionId = randomUUID()
@@ -125,6 +134,11 @@ export async function runSkillOnce(
 
     incrementRunCount(skillId)
 
+    // Charge user on success
+    if (skill.price_per_run > 0) {
+      charge(userWallet, skill.price_per_run)
+    }
+
     return { executionId, output, durationMs, tokensUsed, status: 'completed' }
   } catch (e) {
     const durationMs = Date.now() - startTime
@@ -182,4 +196,144 @@ export function getExecutionsBySkill(
 
 export function getExecutionById(id: string): SkillExecutionRow | undefined {
   return (getDb().prepare('SELECT * FROM skill_executions WHERE id = $id').get({ $id: id }) as SkillExecutionRow) ?? undefined
+}
+
+/**
+ * Streaming skill execution — returns a ReadableStream that emits SSE events.
+ * Events: chunk (text delta), complete (final stats), error
+ */
+export function runSkillStream(
+  skillId: string,
+  userWallet: string,
+  inputs: Record<string, unknown>,
+): { executionId: string; stream: ReadableStream } {
+  const skill = getSkillById(skillId)
+  if (!skill) throw new Error('Skill not found')
+  if (!skill.active) throw new Error('Skill is inactive')
+
+  const validationError = validateInputs(skill, inputs)
+  if (validationError) throw new Error(validationError)
+
+  // Check balance for paid skills
+  if (skill.price_per_run > 0) {
+    const bal = getBalance(userWallet)
+    if (bal.balance < skill.price_per_run) {
+      throw new Error(`Insufficient balance. Need ${skill.price_per_run} micro-USDC, have ${bal.balance}. Deposit funds first.`)
+    }
+  }
+
+  const db = getDb()
+  const executionId = randomUUID()
+  const startTime = Date.now()
+
+  // Create execution record
+  db.prepare(`
+    INSERT INTO skill_executions (id, skill_id, user_wallet, input_json, status)
+    VALUES ($id, $skillId, $userWallet, $inputJson, 'running')
+  `).run({
+    $id: executionId,
+    $skillId: skillId,
+    $userWallet: userWallet,
+    $inputJson: JSON.stringify(inputs),
+  })
+
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: string, data: unknown) => {
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+        } catch { /* client disconnected */ }
+      }
+
+      try {
+        // Build user prompt
+        let userPrompt: string
+        if (skill.user_prompt_template) {
+          userPrompt = renderTemplate(skill.user_prompt_template, inputs)
+        } else {
+          userPrompt = Object.entries(inputs).map(([k, v]) => `${k}: ${v}`).join('\n')
+        }
+
+        const geminiApiKey = process.env.GEMINI_API_KEY
+        if (!geminiApiKey) throw new Error('GEMINI_API_KEY not configured')
+
+        let fullOutput = ''
+        let tokensUsed: number | null = null
+
+        await geminiQueue.run(async () => {
+          const genAI = new GoogleGenerativeAI(geminiApiKey)
+          const model = genAI.getGenerativeModel({
+            model: skill.model || 'gemini-2.0-flash',
+            generationConfig: {
+              temperature: skill.temperature ?? 0.3,
+              maxOutputTokens: skill.max_tokens || 1024,
+            },
+            systemInstruction: skill.system_prompt,
+          })
+
+          const result = await model.generateContentStream(userPrompt)
+
+          for await (const chunk of result.stream) {
+            const text = chunk.text()
+            if (text) {
+              fullOutput += text
+              send('chunk', { text })
+            }
+          }
+
+          const response = await result.response
+          const usage = response.usageMetadata
+          tokensUsed = usage ? (usage.promptTokenCount || 0) + (usage.candidatesTokenCount || 0) : null
+        })
+
+        const durationMs = Date.now() - startTime
+
+        // Update DB
+        db.prepare(`
+          UPDATE skill_executions SET
+            output_text = $output, status = 'completed',
+            duration_ms = $durationMs, tokens_used = $tokensUsed,
+            amount_charged = $amountCharged, completed_at = datetime('now')
+          WHERE id = $id
+        `).run({
+          $id: executionId,
+          $output: fullOutput,
+          $durationMs: durationMs,
+          $tokensUsed: tokensUsed,
+          $amountCharged: skill.price_per_run,
+        })
+
+        incrementRunCount(skillId)
+
+        // Charge user on success
+        if (skill.price_per_run > 0) {
+          charge(userWallet, skill.price_per_run)
+        }
+
+        send('complete', { executionId, durationMs, tokensUsed, status: 'completed' })
+        controller.close()
+      } catch (e) {
+        const durationMs = Date.now() - startTime
+        const errorMessage = (e as Error).message
+
+        db.prepare(`
+          UPDATE skill_executions SET
+            status = 'failed', error_message = $error,
+            duration_ms = $durationMs, completed_at = datetime('now')
+          WHERE id = $id
+        `).run({
+          $id: executionId,
+          $error: errorMessage,
+          $durationMs: durationMs,
+        })
+
+        send('error', { error: errorMessage })
+        try { controller.close() } catch { /* already closed */ }
+      }
+    },
+  })
+
+  return { executionId, stream }
 }

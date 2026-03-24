@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation'
 import { useAccount } from 'wagmi'
 import { useRouter } from 'next/navigation'
 import { useSignMessage } from 'wagmi'
-import { fetchSkill, runSkill, fetchSkillExecutions, deleteSkill } from '@/lib/skills-api'
+import { fetchSkill, runSkill, runSkillStream, fetchSkillExecutions, deleteSkill, fetchBalance, depositFunds, rateSkill as rateSkillApi, fetchUserRating } from '@/lib/skills-api'
 import { signAction } from '@/lib/sign-action'
 
 interface Skill {
@@ -78,11 +78,49 @@ export default function SkillDetailPage() {
   const [executions, setExecutions] = useState<Execution[]>([])
   const [loading, setLoading] = useState(true)
   const [execTab, setExecTab] = useState<'all' | 'mine'>('all')
+  const [balance, setBalance] = useState<number | null>(null)
+  const [depositing, setDepositing] = useState(false)
+  const [userRating, setUserRating] = useState<number | null>(null)
+  const [ratingHover, setRatingHover] = useState(0)
 
   useEffect(() => {
     fetchSkill(id).then(setSkill).catch(console.error).finally(() => setLoading(false))
     fetchSkillExecutions(id, address?.toLowerCase()).then(setExecutions).catch(() => {})
   }, [id, address])
+
+  useEffect(() => {
+    if (address) {
+      fetchBalance(address).then(b => setBalance(b.balance)).catch(() => {})
+      fetchUserRating(id, address).then(setUserRating).catch(() => {})
+    }
+  }, [address, id])
+
+  const handleRate = async (rating: number) => {
+    if (!address) return
+    try {
+      const auth = await signAction(signMessageAsync, address, 'rate-skill', id)
+      const result = await rateSkillApi(id, rating, auth)
+      setUserRating(rating)
+      // Update skill's cached rating
+      if (skill) setSkill({ ...skill, avg_rating: result.avg_rating })
+    } catch (e: any) {
+      alert(e.message)
+    }
+  }
+
+  const handleDeposit = async () => {
+    if (!address) return
+    setDepositing(true)
+    try {
+      const auth = await signAction(signMessageAsync, address, 'deposit')
+      const result = await depositFunds(5_000_000, auth) // 5 USDC demo deposit
+      setBalance(result.balance)
+    } catch (e: any) {
+      alert(e.message)
+    } finally {
+      setDepositing(false)
+    }
+  }
 
   const isOwner = skill && address && skill.creator_wallet.toLowerCase() === address.toLowerCase()
 
@@ -112,15 +150,29 @@ export default function SkillDetailPage() {
 
     try {
       const auth = await signAction(signMessageAsync, address, 'run-skill', id)
-      const result = await runSkill(id, inputs, auth)
-      if (result.status === 'failed') {
-        setError(result.error || 'Execution failed')
+
+      if (skill?.execution_mode === 'stream') {
+        // Streaming mode — render chunks live
+        setOutput('')
+        await runSkillStream(
+          id, inputs, auth,
+          (text) => setOutput(prev => (prev || '') + text),
+          (stats) => setExecStats({ durationMs: stats.durationMs, tokensUsed: stats.tokensUsed }),
+          (err) => setError(err),
+        )
       } else {
-        setOutput(result.output)
-        setExecStats({ durationMs: result.durationMs, tokensUsed: result.tokensUsed })
+        // Once mode
+        const result = await runSkill(id, inputs, auth)
+        if (result.status === 'failed') {
+          setError(result.error || 'Execution failed')
+        } else {
+          setOutput(result.output)
+          setExecStats({ durationMs: result.durationMs, tokensUsed: result.tokensUsed })
+        }
       }
-      // Refresh executions
+      // Refresh executions and balance
       fetchSkillExecutions(id, address.toLowerCase()).then(setExecutions).catch(() => {})
+      fetchBalance(address).then(b => setBalance(b.balance)).catch(() => {})
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -214,16 +266,33 @@ export default function SkillDetailPage() {
                 </span>
               ) : !address ? 'Connect Wallet First' : `Run Skill${skill.price_per_run > 0 ? ` (${formatPrice(skill.price_per_run)})` : ''}`}
             </button>
+
+            {/* Balance info */}
+            {address && (
+              <div className="flex items-center justify-between mt-3 text-xs text-[#666]">
+                <span>
+                  Balance: {balance !== null ? `$${(balance / 1_000_000).toFixed(4)}` : '...'}
+                  {skill.price_per_run > 0 && balance !== null && balance < skill.price_per_run && (
+                    <span className="text-red-400 ml-1">(insufficient)</span>
+                  )}
+                </span>
+                <button onClick={handleDeposit} disabled={depositing}
+                  className="text-[#00d4aa] hover:text-[#00b894] transition-colors disabled:opacity-50">
+                  {depositing ? 'Depositing...' : '+ Deposit 5 USDC (demo)'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Right: Output */}
           <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Output</h2>
 
-            {output ? (
+            {output !== null ? (
               <div>
                 <div className="bg-[#0a0a0a] border border-[#222] rounded-lg p-4 text-sm text-[#ccc] whitespace-pre-wrap leading-relaxed max-h-[400px] overflow-y-auto">
                   {output}
+                  {running && <span className="inline-block w-2 h-4 bg-[#00d4aa] ml-0.5 animate-pulse" />}
                 </div>
                 {execStats && (
                   <div className="flex gap-4 mt-3 text-xs text-[#666]">
@@ -236,7 +305,7 @@ export default function SkillDetailPage() {
               <div className="flex items-center justify-center h-32 text-[#666]">
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-[#333] border-t-[#00d4aa] rounded-full animate-spin" />
-                  Executing skill...
+                  {skill?.execution_mode === 'stream' ? 'Starting stream...' : 'Executing skill...'}
                 </span>
               </div>
             ) : (
@@ -246,6 +315,31 @@ export default function SkillDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Rating */}
+        {address && output && (
+          <div className="mt-6 bg-[#111] border border-[#1a1a1a] rounded-xl p-4 flex items-center gap-4">
+            <span className="text-sm text-[#888]">Rate this skill:</span>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map(star => (
+                <button key={star}
+                  onClick={() => handleRate(star)}
+                  onMouseEnter={() => setRatingHover(star)}
+                  onMouseLeave={() => setRatingHover(0)}
+                  className="text-xl transition-colors"
+                >
+                  <span className={
+                    (ratingHover || userRating || 0) >= star ? 'text-yellow-400' : 'text-[#333]'
+                  }>
+                    {'★'}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {userRating && <span className="text-xs text-[#666]">Your rating: {userRating}/5</span>}
+            {skill.avg_rating && <span className="text-xs text-[#666]">Avg: {skill.avg_rating.toFixed(1)}</span>}
+          </div>
+        )}
 
         {/* Recent Executions */}
         {executions.length > 0 && (

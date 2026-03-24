@@ -1,8 +1,10 @@
 import { Hono } from 'hono'
 import {
   listSkills, getSkillById, createSkill, updateSkill, deactivateSkill,
+  rateSkill, getUserRating, getSkillStats,
 } from '../services/skill/skillRegistry.js'
-import { runSkillOnce, getExecutionsBySkill } from '../services/skill/skillExecutor.js'
+import { runSkillOnce, runSkillStream, getExecutionsBySkill } from '../services/skill/skillExecutor.js'
+import { getBalance, deposit } from '../services/skill/billing.js'
 import { requireSignature } from '../middleware/verifySignature.js'
 import { rateLimiter } from '../middleware/rateLimit.js'
 
@@ -19,11 +21,34 @@ skillsRoutes.get('/', (c) => {
   return c.json(skills)
 })
 
+// Popular skills (must be before /:id)
+skillsRoutes.get('/popular', (c) => {
+  const skills = listSkills()
+  const sorted = skills
+    .sort((a, b) => (b.run_count + (b.avg_rating || 0) * 100) - (a.run_count + (a.avg_rating || 0) * 100))
+    .slice(0, 20)
+  return c.json(sorted)
+})
+
 // Get skill by ID
 skillsRoutes.get('/:id', (c) => {
   const skill = getSkillById(c.req.param('id'))
   if (!skill) return c.json({ error: 'Skill not found' }, 404)
   return c.json(skill)
+})
+
+// Get skill stats
+skillsRoutes.get('/:id/stats', (c) => {
+  const stats = getSkillStats(c.req.param('id'))
+  return c.json(stats)
+})
+
+// Get user's rating for a skill
+skillsRoutes.get('/:id/rating', (c) => {
+  const wallet = c.req.query('wallet')
+  if (!wallet) return c.json({ rating: null })
+  const rating = getUserRating(c.req.param('id'), wallet)
+  return c.json({ rating })
 })
 
 // Get execution history (permission-filtered)
@@ -40,6 +65,30 @@ skillsRoutes.get('/:id/executions', (c) => {
   })
   return c.json(executions)
 })
+
+// --- Billing routes ---
+
+// Get user balance
+skillsRoutes.get('/billing/balance', (c) => {
+  const wallet = c.req.query('wallet')
+  if (!wallet) return c.json({ error: 'wallet query param required' }, 400)
+  return c.json(getBalance(wallet))
+})
+
+// Deposit funds (demo: no real payment, just credits)
+skillsRoutes.post('/billing/deposit',
+  requireSignature('deposit'),
+  async (c) => {
+    const wallet: string = c.get('verifiedWallet')
+    const body = await c.req.json()
+    const amount = parseInt(body.amount)
+
+    if (!amount || amount <= 0) return c.json({ error: 'Invalid amount' }, 400)
+
+    const balance = deposit(wallet, amount)
+    return c.json(balance)
+  },
+)
 
 // --- Authenticated write routes (signature required) ---
 
@@ -102,7 +151,27 @@ skillsRoutes.delete('/:id',
   },
 )
 
-// Execute skill (signature + rate limit)
+// Rate a skill (signature required)
+skillsRoutes.post('/:id/rate',
+  requireSignature('rate-skill'),
+  async (c) => {
+    const wallet: string = c.get('verifiedWallet')
+    const body = await c.req.json()
+    const rating = parseInt(body.rating)
+
+    if (!rating || rating < 1 || rating > 5) {
+      return c.json({ error: 'Rating must be 1-5' }, 400)
+    }
+
+    const skill = getSkillById(c.req.param('id'))
+    if (!skill) return c.json({ error: 'Skill not found' }, 404)
+
+    const result = rateSkill(c.req.param('id'), wallet, rating)
+    return c.json(result)
+  },
+)
+
+// Execute skill — once mode (signature + rate limit)
 skillsRoutes.post('/:id/run',
   requireSignature('run-skill'),
   rateLimiter({ maxRequests: 10, windowMs: 60_000 }),
@@ -113,6 +182,32 @@ skillsRoutes.post('/:id/run',
     try {
       const result = await runSkillOnce(c.req.param('id'), wallet, body.inputs || {})
       return c.json(result)
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 400)
+    }
+  },
+)
+
+// Execute skill — streaming mode (signature + rate limit, returns SSE)
+skillsRoutes.post('/:id/stream',
+  requireSignature('run-skill'),
+  rateLimiter({ maxRequests: 10, windowMs: 60_000 }),
+  async (c) => {
+    const wallet: string = c.get('verifiedWallet')
+    const body = await c.req.json()
+
+    try {
+      const { executionId, stream } = runSkillStream(c.req.param('id'), wallet, body.inputs || {})
+
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no',
+          'X-Execution-Id': executionId,
+        },
+      })
     } catch (e) {
       return c.json({ error: (e as Error).message }, 400)
     }

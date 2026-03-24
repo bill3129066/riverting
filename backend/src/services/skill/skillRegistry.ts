@@ -112,3 +112,60 @@ export function deactivateSkill(id: string, creatorWallet: string): boolean {
 export function incrementRunCount(id: string): void {
   getDb().prepare('UPDATE skills SET run_count = run_count + 1 WHERE id = $id').run({ $id: id })
 }
+
+export function rateSkill(skillId: string, userWallet: string, rating: number): { avg_rating: number; count: number } {
+  const db = getDb()
+
+  db.prepare(`
+    INSERT INTO skill_ratings (id, skill_id, user_wallet, rating)
+    VALUES ($id, $skillId, $wallet, $rating)
+    ON CONFLICT(skill_id, user_wallet) DO UPDATE SET rating = $rating, created_at = datetime('now')
+  `).run({
+    $id: randomUUID(),
+    $skillId: skillId,
+    $wallet: userWallet.toLowerCase(),
+    $rating: rating,
+  })
+
+  // Recalculate average
+  const stats = db.prepare(
+    'SELECT AVG(rating) as avg, COUNT(*) as cnt FROM skill_ratings WHERE skill_id = $skillId',
+  ).get({ $skillId: skillId }) as { avg: number; cnt: number }
+
+  // Update skill's cached average
+  db.prepare('UPDATE skills SET avg_rating = $avg, updated_at = datetime(\'now\') WHERE id = $id').run({
+    $id: skillId,
+    $avg: stats.avg,
+  })
+
+  return { avg_rating: Math.round(stats.avg * 10) / 10, count: stats.cnt }
+}
+
+export function getUserRating(skillId: string, userWallet: string): number | null {
+  const row = getDb().prepare(
+    'SELECT rating FROM skill_ratings WHERE skill_id = $skillId AND user_wallet = $wallet',
+  ).get({ $skillId: skillId, $wallet: userWallet.toLowerCase() }) as { rating: number } | undefined
+
+  return row?.rating ?? null
+}
+
+export function getSkillStats(skillId: string): { runCount: number; avgRating: number | null; ratingCount: number; totalEarned: number } {
+  const db = getDb()
+  const skill = getSkillById(skillId)
+  if (!skill) return { runCount: 0, avgRating: null, ratingCount: 0, totalEarned: 0 }
+
+  const ratings = db.prepare(
+    'SELECT COUNT(*) as cnt FROM skill_ratings WHERE skill_id = $skillId',
+  ).get({ $skillId: skillId }) as { cnt: number }
+
+  const earnings = db.prepare(
+    'SELECT COALESCE(SUM(amount_charged), 0) as total FROM skill_executions WHERE skill_id = $skillId AND status = \'completed\'',
+  ).get({ $skillId: skillId }) as { total: number }
+
+  return {
+    runCount: skill.run_count,
+    avgRating: skill.avg_rating,
+    ratingCount: ratings.cnt,
+    totalEarned: earnings.total,
+  }
+}
