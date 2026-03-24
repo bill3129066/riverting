@@ -7,4 +7,5 @@ export const config = {
   xlayerWs: process.env.XLAYER_WS_URL || 'wss://xlayerws.okx.com',
   escrowAddress: process.env.ESCROW_CONTRACT_ADDRESS || '',
   usdcAddress: process.env.USDC_ADDRESS || '',
+  platformOperatorKey: process.env.PLATFORM_OPERATOR_KEY || '',
 }
