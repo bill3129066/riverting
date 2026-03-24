@@ -38,6 +38,9 @@ typechain-types/
 
 # SQLite
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 
 # Logs
 *.log
