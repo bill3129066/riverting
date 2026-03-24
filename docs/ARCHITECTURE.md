@@ -1,8 +1,8 @@
 # Riverting — Architecture Document
 
-**Streaming Salary for AI Agents on X Layer**
+**AI Agent Marketplace with Streaming Salary on X Layer**
 
-> AI DeFi 分析師按秒領薪。用 OnchainOS 做真實鏈上分析，工作一秒付一秒，proof 停了錢就停。
+> Three parties. One payment stream. Curators upload agents, users consume them per-second, the platform hosts and settles.
 
 **Target**: X Layer OnchainOS AI Hackathon (40,000 USDT)  
 **Team**: 2 devs, 7–10 days  
@@ -13,17 +13,18 @@
 ## Table of Contents
 
 1. [Product Definition](#1-product-definition)
-2. [System Architecture](#2-system-architecture)
-3. [Smart Contracts](#3-smart-contracts)
-4. [Backend Services](#4-backend-services)
-5. [AI Agent Design](#5-ai-agent-design)
-6. [Frontend Architecture](#6-frontend-architecture)
-7. [x402 Integration](#7-x402-integration)
-8. [On-Chain Transaction Strategy](#8-on-chain-transaction-strategy)
-9. [Project File Structure](#9-project-file-structure)
-10. [10-Day Build Plan](#10-10-day-build-plan)
-11. [Risk Mitigation](#11-risk-mitigation)
-12. [Demo Choreography](#12-demo-choreography)
+2. [Three-Party Model](#2-three-party-model)
+3. [System Architecture](#3-system-architecture)
+4. [Smart Contracts](#4-smart-contracts)
+5. [Backend Services](#5-backend-services)
+6. [Agent Runtime](#6-agent-runtime)
+7. [Frontend Architecture](#7-frontend-architecture)
+8. [x402 Integration](#8-x402-integration)
+9. [On-Chain Transaction Strategy](#9-on-chain-transaction-strategy)
+10. [Project File Structure](#10-project-file-structure)
+11. [10-Day Build Plan](#11-10-day-build-plan)
+12. [Risk Mitigation](#12-risk-mitigation)
+13. [Demo Choreography](#13-demo-choreography)
 
 ---
 
@@ -31,372 +32,603 @@
 
 ### 1.1 One-Liner
 
-> AI agents get paid per-second in USDC on X Layer. Proof-of-work heartbeats keep the stream honest. No proof = no pay.
+> An AI agent marketplace where curators upload skill configs, users pay per-second to use agents, and the platform hosts everything — with on-chain proof that work actually happens.
 
-### 1.2 Dual Payment Modes
+### 1.2 Three Roles
 
-| Mode | Mechanism | Use Case | x402 Role |
-|---|---|---|---|
-| **Retainer** | USDC streaming salary with proof heartbeats | Employer hires AI agent for continuous analysis | On-chain escrow contract |
-| **Spot** | Pay-per-query $0.001–$0.01 | Anyone queries the agent's findings | **x402** — HTTP 402 → pay → 200 OK |
+| Role | What They Do | Revenue |
+|---|---|---|
+| **Agent Curator** | Uploads agent skill configs (system prompt, tools, params). Sets pricing. | Earns curator rate per second of usage |
+| **Platform (us)** | Hosts unified LLM runtime, spawns instances, manages billing, submits proofs | Earns platform fee per second of usage |
+| **User** | Browses agent catalog, selects agent, starts streaming session, pays per-second | Pays total rate (curator + platform fee) |
 
-### 1.3 Why X Layer
+### 1.3 Payment Model
+
+```
+User pays:  $0.0013/sec (total)
+            ├── $0.001/sec  → Curator rate (curator-defined)
+            └── $0.0003/sec → Platform fee (platform-defined)
+
+On-chain:   User ──USDC──► Platform Escrow Contract
+                                 │
+                                 │  session end / claim
+                                 ▼
+                            Platform Wallet (on-chain)
+                                 │
+Off-chain:                       │  batch settlement
+                                 ▼
+                            Curator Wallet (periodic payout)
+```
+
+### 1.4 Why X Layer
 
 | Advantage | Detail |
 |---|---|
 | **Near-zero gas** | OKB gas negligible — proof submissions < $0.001 each |
 | **Flashblocks** | 200ms preconfirmation for near-instant UX |
-| **OnchainOS APIs** | Market/Trade/Wallet APIs — agent doesn't build data adapters from scratch |
-| **Real DeFi ecosystem** | OKX ecosystem with DEXes and protocols |
-| **x402 native support** | EVM-equivalent, EIP-3009 works directly |
-| **WebSocket** | `wss://xlayerws.okx.com` for real-time event streaming |
-| **$40K prize pool** | 4× larger than Circle Arc hackathon |
+| **OnchainOS APIs** | Market/Trade/Wallet APIs for agent data |
+| **x402 native** | EVM-equivalent, EIP-3009 works directly |
+| **WebSocket** | `wss://xlayerws.okx.com` for real-time events |
+| **$40K prize pool** | 4× Circle Arc hackathon |
 
-### 1.4 MVP Scope
+### 1.5 MVP Scope
 
 **Build:**
-- Streaming salary contract with proof-gated accrual
-- DeFi analyst agent powered by OnchainOS + LLM
-- Live dashboard showing work output + salary counter + proof timeline
-- x402-gated paid query endpoint
+- Agent Registry — curators upload skill configs with pricing
+- Agent Catalog — users browse and select agents
+- Streaming session — per-second billing with proof-gated accrual
+- Platform escrow contract on X Layer
+- Live dashboard — work output + salary counter + proof timeline
+- x402-gated spot query endpoint
+- Curator earnings dashboard
 - 50+ on-chain transactions in demo
 
 **Do NOT build:**
-- Autonomous agent economy / marketplace
 - Semantic proof verification on-chain
-- Support for >3 analysis templates
-- Decentralized storage (simple DB/S3 for hackathon)
-- Multi-agent competition
+- Real VM isolation (use shared LLM runtime for hackathon)
+- Automated curator payouts on-chain (manual/batch for hackathon)
+- Agent ratings/reviews system
+- Support for >3 agent templates
 
-### 1.5 Hackathon Requirements Mapping
+### 1.6 Hackathon Requirements Mapping
 
 | Requirement | How We Satisfy |
 |---|---|
-| TX Hash on X Layer mainnet | Contract deployment + proof submissions + claims |
-| OnchainOS APIs | Agent uses Market API + Trade API for DeFi data |
-| x402 integration | Pay-per-query endpoint |
-| AI model integration | Claude/GPT for DeFi analysis + structured output |
+| TX Hash on X Layer mainnet | Escrow deposits + proof submissions + claims |
+| OnchainOS APIs | Agent instances use Market/Trade/Wallet APIs |
+| x402 integration | Spot query paywall |
+| AI model integration | Unified LLM runtime loading curator skill configs |
 | GitHub repo | This repo |
 | Project X account | Created for submission |
 
 ---
 
-## 2. System Architecture
+## 2. Three-Party Model
 
-### 2.1 System Diagram
-
-```
-┌──────────────────────────── FRONTEND (Next.js) ────────────────────────────┐
-│                                                                             │
-│  Employer Dashboard          Live Session Page          Public Query UI     │
-│  - connect wallet            - agent worklog            - ask premium Q     │
-│  - approve USDC              - salary ticker            - x402 paywall      │
-│  - create/start stream       - proof timeline           - response view     │
-│  - pause/resume/stop         - stream status            - payment receipt   │
-│                                                                             │
-└──────────┬──────────────────────────┬──────────────────────────┬───────────┘
-           │ REST / SSE               │ viem reads               │ HTTP/x402
-           ▼                          ▼                          ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        BACKEND (Node.js / TypeScript)                       │
-│                                                                             │
-│  ┌─────────────────┐  ┌──────────────┐  ┌────────────┐  ┌──────────────┐  │
-│  │ Session          │  │ Proof Worker │  │ Event      │  │ x402 Paywall │  │
-│  │ Orchestrator     │  │ / Relayer    │  │ Indexer    │  │ Server       │  │
-│  │                  │  │              │  │            │  │              │  │
-│  │ start/pause/     │  │ build proof  │  │ watch      │  │ GET /queries │  │
-│  │ resume/stop      │  │ submit tx    │  │ contract   │  │ HTTP 402     │  │
-│  │ sessions         │  │ every 3-5s   │  │ events     │  │ verify pay   │  │
-│  └────────┬─────────┘  └──────┬───────┘  └─────┬──────┘  └──────┬───────┘  │
-│           │                   │                 │                │          │
-│  ┌────────▼───────────────────▼─────────────────▼────────────────▼───────┐  │
-│  │                        OnchainOS Data Layer                           │  │
-│  │  Market API → prices, pools, TVL, volume                              │  │
-│  │  Trade API  → DEX quotes, swap data, order books                      │  │
-│  │  Wallet API → balances, token holdings, tx history                    │  │
-│  │  X Layer RPC → direct contract reads (slot0, totalAssets, etc.)       │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│  ┌─────────────────┐  ┌──────────────────┐                                 │
-│  │ Persistence      │  │ Object Storage   │                                 │
-│  │ (SQLite/Postgres) │  │ (proof packages)  │                                 │
-│  └─────────────────┘  └──────────────────┘                                 │
-└──────────┬──────────────────────────────────────────────────────────────────┘
-           │ contract writes / reads
-           ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                     X LAYER (Chain ID: 196, OP Stack)                       │
-│                                                                             │
-│  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │  AgentPayrollEscrow.sol                                                │ │
-│  │  ─────────────────────                                                 │ │
-│  │  Sessions: employer, agent, ratePerSecond, proofWindow, fundedBalance  │ │
-│  │  Functions: createSession / topUp / submitProof / claim / pause /      │ │
-│  │             resume / stop / refundUnused / enforceProofTimeout         │ │
-│  │  Payment: USDC (bridged ERC-20)                                        │ │
-│  │  Verification: proof hash + liveness check (not semantic correctness)  │ │
-│  └────────────────────────────────────────────────────────────────────────┘ │
-│                                                                             │
-│  RPC: https://rpc.xlayer.tech                                               │
-│  WS:  wss://xlayerws.okx.com                                               │
-│  Flashblocks: https://rpc.xlayer.tech/flashblocks (200ms preconfirm)       │
-│  Explorer: https://www.oklink.com/xlayer                                    │
-│  Gas: OKB (near-zero)                                                       │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 2.2 Data Flow
+### 2.1 Lifecycle
 
 ```
-Employer
-  → approve USDC → createSession() on X Layer
-  → fund escrow → startSession()
+PHASE 1: Curator Onboarding
+──────────────────────────
+Curator → Platform API:
+  - Upload agent skill config (system prompt, tools, params)
+  - Set curator rate ($0.001/sec)
+  - Agent appears in catalog
 
-Contract emits SessionStarted
-  → Backend Event Indexer sees event
-  → Session Orchestrator starts AI agent
+PHASE 2: User Discovery & Session
+──────────────────────────────────
+User → Browse catalog → Select "DeFi Pool Analyst" ($0.0013/sec total)
+User → Deposit USDC to escrow contract
+User → Start session → Platform spawns agent instance
 
-Agent work loop (every 3-5 seconds):
-  → OnchainOS Market API → pool/token data
-  → OnchainOS Trade API → DEX quotes/volume
-  → X Layer RPC → direct contract reads
-  → LLM analysis → structured output
-  → Push to dashboard via SSE
-  → Build proof package → hash(output + sources + blockNum)
-  → submitProof() on X Layer → contract records heartbeat
+PHASE 3: Streaming Work
+────────────────────────
+Agent instance runs on platform LLM runtime:
+  - Loads curator's skill config
+  - Fetches data via OnchainOS APIs
+  - Produces analysis output → streams to user dashboard
+  - Platform submits proof-of-work every 3-5 seconds
+  - Salary accrues per-second in escrow contract
 
-If proof stops (> proofWindow seconds):
-  → Anyone calls enforceProofTimeout()
-  → Contract auto-pauses → salary accrual freezes
-  → Dashboard shows PAUSED_NO_PROOF
+PHASE 4: Settlement
+────────────────────
+Session ends (user stops / deposit exhausted / timeout):
+  - Platform claims accrued USDC from escrow (on-chain)
+  - Platform records curator's share (off-chain)
+  - Curator sees earnings in dashboard
+  - Platform batch-settles to curator periodically
+```
 
-Agent claims accumulated USDC:
-  → claim() → USDC transferred from escrow
+### 2.2 Agent as Skill Config
 
-Public user queries findings:
-  → GET /queries/analysis → HTTP 402
-  → User signs EIP-3009 payment → retries with signature
-  → Server verifies → returns analysis → HTTP 200
+Curators do NOT upload code. They upload a **skill configuration**:
+
+```typescript
+interface AgentSkillConfig {
+  // Identity
+  name: string;                    // "DeFi Pool Analyst"
+  description: string;             // What this agent does
+  curator: `0x${string}`;         // Curator wallet (for payouts)
+  category: string;                // "defi" | "trading" | "research"
+
+  // Pricing
+  curatorRatePerSecond: bigint;   // In USDC smallest units
+
+  // AI Configuration
+  systemPrompt: string;            // The core instructions
+  model: "gpt-4.1-mini" | "claude-sonnet"; // Preferred model
+  temperature: number;
+
+  // Tools & Data Access
+  tools: ToolConfig[];             // Which OnchainOS APIs + RPC methods
+  allowedChains: string[];         // Which chains the agent can read
+
+  // Capabilities
+  outputFormat: "streaming" | "report" | "both";
+  analysisTemplates: string[];     // ["pool-snapshot", "yield-compare"]
+  maxSessionDuration: number;      // Seconds (0 = unlimited)
+}
+
+interface ToolConfig {
+  type: "onchainos-market" | "onchainos-trade" | "onchainos-wallet" | "rpc-read";
+  description: string;
+  params?: Record<string, unknown>;
+}
+```
+
+The platform's unified LLM runtime takes this config and creates an agent instance that:
+- Uses the curator's system prompt
+- Has access to the specified tools only
+- Outputs in the specified format
+- Runs within the specified constraints
+
+### 2.3 Multi-Tenancy
+
+Same agent config → multiple simultaneous instances:
+
+```
+"DeFi Pool Analyst" (by Curator A)
+    ├── Instance #1 → User X session (analyzing ETH/USDC pool)
+    ├── Instance #2 → User Y session (analyzing OKB/USDT pool)
+    └── Instance #3 → User Z session (analyzing BTC/USDC pool)
+
+Each instance:
+  - Independent session + proof stream
+  - Independent escrow deposit
+  - Shares the same skill config
+  - Runs on platform LLM runtime
 ```
 
 ---
 
-## 3. Smart Contracts
+## 3. System Architecture
 
-### 3.1 Design Principles
+### 3.1 System Diagram
 
-- **One contract** for MVP — `AgentPayrollEscrow.sol` handles sessions, proofs, and payments
+```
+┌──────────────────────── FRONTEND (Next.js) ─────────────────────────────┐
+│                                                                          │
+│  Curator Dashboard       User Marketplace       Live Session Page        │
+│  - upload skill config   - browse agents        - agent worklog          │
+│  - set pricing           - filter by category   - salary ticker          │
+│  - view earnings         - see rates + desc     - proof timeline         │
+│  - payout history        - select + deposit     - stream controls        │
+│                          - start session        - cost breakdown         │
+│                                                                          │
+│  Spot Query Page                                                         │
+│  - x402 paywall                                                          │
+│  - paid response viewer                                                  │
+│                                                                          │
+└──────┬──────────────────────┬────────────────────────┬──────────────────┘
+       │ REST / SSE           │ viem reads              │ HTTP / x402
+       ▼                      ▼                         ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      BACKEND (Node.js / TypeScript)                      │
+│                                                                          │
+│  ┌────────────────┐ ┌────────────────┐ ┌──────────────┐ ┌────────────┐ │
+│  │ Agent Registry  │ │ Session        │ │ Proof Worker │ │ x402       │ │
+│  │                 │ │ Orchestrator   │ │ / Relayer    │ │ Paywall    │ │
+│  │ CRUD agents     │ │                │ │              │ │            │ │
+│  │ catalog API     │ │ spawn instance │ │ build proof  │ │ spot query │ │
+│  │ curator auth    │ │ manage lifecycle│ │ submit tx   │ │ endpoints  │ │
+│  └────────┬────────┘ └───────┬────────┘ └──────┬───────┘ └─────┬──────┘ │
+│           │                  │                  │               │        │
+│  ┌────────▼──────────────────▼──────────────────▼───────────────▼──────┐ │
+│  │                    Instance Manager                                 │ │
+│  │  - Load skill config from registry                                  │ │
+│  │  - Spin up LLM session with curator's prompt + tools                │ │
+│  │  - Route OnchainOS API calls through platform credentials           │ │
+│  │  - Emit work steps → SSE → frontend                                 │ │
+│  │  - Package proofs → Proof Worker → on-chain                         │ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+│                                                                          │
+│  ┌────────────────┐ ┌────────────────┐ ┌──────────────────────────────┐ │
+│  │ Settlement      │ │ Event Indexer  │ │ OnchainOS Data Layer         │ │
+│  │ Service         │ │                │ │                              │ │
+│  │ track curator   │ │ watch contract │ │ Market API → prices, pools   │ │
+│  │ earnings        │ │ events via WS  │ │ Trade API → DEX quotes       │ │
+│  │ batch payouts   │ │                │ │ Wallet API → balances        │ │
+│  └────────────────┘ └────────────────┘ └──────────────────────────────┘ │
+│                                                                          │
+│  ┌────────────────┐ ┌────────────────┐                                  │
+│  │ Persistence     │ │ Object Storage │                                  │
+│  │ (SQLite)        │ │ (proof pkgs)   │                                  │
+│  └────────────────┘ └────────────────┘                                  │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │ contract writes / reads
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                   X LAYER (Chain ID: 196, OP Stack)                      │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  RivertingEscrow.sol                                               │  │
+│  │  ─────────────────                                                 │  │
+│  │  Agent Registry: agentId → curator, curatorRate, active            │  │
+│  │  Sessions: user, agentId, totalRate, proofWindow, deposit, accrued │  │
+│  │  Proofs: proofHash + liveness check                                │  │
+│  │  Settlement: platform wallet claims accrued USDC                   │  │
+│  │  Payment Token: USDC (bridged ERC-20)                              │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  RPC: https://rpc.xlayer.tech                                            │
+│  WS:  wss://xlayerws.okx.com                                            │
+│  Flashblocks: https://rpc.xlayer.tech/flashblocks                        │
+│  Explorer: https://www.oklink.com/xlayer                                 │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 Data Flow
+
+```
+① Curator uploads skill config → stored in Agent Registry (off-chain DB)
+   Optional: registerAgent() on-chain (agentId, curator wallet, curatorRate)
+
+② User browses catalog → selects agent → deposits USDC
+   → createSession(agentId, depositAmount) on X Layer escrow contract
+
+③ Contract emits SessionStarted
+   → Event Indexer picks up
+   → Instance Manager loads skill config for agentId
+   → Spawns LLM session with curator's prompt + tools
+
+④ Agent work loop (every 3-5 seconds):
+   → OnchainOS APIs → data
+   → LLM analysis → structured output
+   → Push to dashboard via SSE
+   → Proof Worker builds proof package
+   → submitProof(sessionId, proofHash) on X Layer
+
+⑤ Salary accrues per-second in contract:
+   claimable = ratePerSecond × validActiveTime
+   (capped by proof freshness + deposit balance)
+
+⑥ If proof stops (> proofWindow):
+   → Anyone calls enforceProofTimeout()
+   → Contract auto-pauses → salary stops
+   → Dashboard: "PAUSED: No Proof"
+
+⑦ Session ends → Platform claims accrued USDC on-chain
+   → Settlement Service records curator's share
+   → Curator sees earnings in dashboard
+   → Batch payout to curator wallet (off-chain / periodic on-chain)
+```
+
+---
+
+## 4. Smart Contracts
+
+### 4.1 Design Principles
+
+- **One contract** — `RivertingEscrow.sol` handles agent registry, sessions, proofs, and settlement
+- **Platform is the counterparty** — user pays platform, not curator directly
 - **Lazy accrual** — salary computed mathematically per-second, NOT one tx per second
-- **Proof = liveness** — on-chain checks timing + submitter auth + hash presence; semantic verification stays off-chain
-- **Anyone can trigger timeout** — no keeper dependency
-- **Events over storage** — proof details in events, not heavy on-chain storage
+- **Proof = liveness** — on-chain checks timing + hash presence; semantic verification off-chain
+- **Anyone can trigger timeout** — permissionless, no keeper dependency
+- **Agent registry on-chain** — curators register agents with their wallet + rate (enables transparent marketplace)
 
-### 3.2 AgentPayrollEscrow.sol
+### 4.2 RivertingEscrow.sol
 
 #### State Model
 
 ```solidity
+// ═══════════════════════════════════════════
+// Agent Registry (curator-facing)
+// ═══════════════════════════════════════════
+
+struct Agent {
+    address curator;              // Curator's wallet (for settlement tracking)
+    uint96  curatorRatePerSecond;  // Curator's rate in USDC units
+    string  metadataURI;          // IPFS/HTTP pointer to full skill config JSON
+    bool    active;               // Can users start sessions?
+}
+
+mapping(uint256 => Agent) public agents;
+uint256 public nextAgentId;
+
+// ═══════════════════════════════════════════
+// Sessions (user-facing)
+// ═══════════════════════════════════════════
+
 enum Status { Created, Active, Paused, Stopped }
 
 struct Session {
-    address employer;
-    address agent;
-    address paymentToken;       // USDC on X Layer (bridged ERC-20)
-    uint96  ratePerSecond;      // USDC smallest units / second
-    uint40  proofWindow;        // max seconds between proofs before auto-pause
-    uint40  minProofInterval;   // min seconds between proof submissions (anti-spam)
+    // Parties
+    uint256 agentId;
+    address user;
+
+    // Rates
+    uint96  totalRatePerSecond;   // curatorRate + platformFee
+    uint96  curatorRate;          // Curator's portion
+    uint96  platformFee;          // Platform's portion
+
+    // Proof config
+    uint40  proofWindow;          // Max seconds between proofs
+    uint40  minProofInterval;     // Min seconds between proofs (anti-spam)
+
+    // Timestamps
     uint40  startedAt;
-    uint40  lastCheckpointAt;   // last time accrual was computed
-    uint40  lastProofAt;        // last proof submission timestamp
-    uint128 fundedBalance;      // total USDC deposited
-    uint128 accruedUnclaimed;   // earned but not yet withdrawn
-    uint128 totalClaimed;       // already withdrawn
+    uint40  lastCheckpointAt;
+    uint40  lastProofAt;
+
+    // Financials (in USDC smallest units)
+    uint128 depositedBalance;
+    uint128 accruedTotal;         // Total earned (platform claims this)
+    uint128 totalClaimed;         // Already claimed by platform
+
     Status  status;
 }
 
 mapping(uint256 => Session) public sessions;
 uint256 public nextSessionId;
+
+// ═══════════════════════════════════════════
+// Platform config
+// ═══════════════════════════════════════════
+
+address public platformWallet;
+uint96  public platformFeeRate;   // Platform's per-second fee
+address public paymentToken;      // USDC on X Layer
 ```
 
-#### Core Accounting Rule
+#### Accrual Logic
 
 On any state-changing call, run `_checkpoint(sessionId)`:
 
 ```
 if status == Active:
-    elapsed = block.timestamp - lastCheckpointAt
     // Cap by proof freshness
     effectiveEnd = min(block.timestamp, lastProofAt + proofWindow)
     validElapsed = max(0, effectiveEnd - lastCheckpointAt)
-    newAccrual = validElapsed * ratePerSecond
-    // Cap by remaining funds
-    newAccrual = min(newAccrual, fundedBalance - accruedUnclaimed - totalClaimed)
-    accruedUnclaimed += newAccrual
+
+    // Calculate accrual
+    newAccrual = validElapsed * totalRatePerSecond
+
+    // Cap by remaining deposit
+    remaining = depositedBalance - accruedTotal
+    newAccrual = min(newAccrual, remaining)
+
+    accruedTotal += newAccrual
     lastCheckpointAt = block.timestamp
+
+    // Auto-pause if deposit exhausted
+    if accruedTotal >= depositedBalance:
+        status = Paused
+        emit DepositExhausted(sessionId)
 ```
 
-**Key insight**: Salary only accrues while `now <= lastProofAt + proofWindow`. Agent stops proving → accrual stops automatically.
+**Key**: Salary only accrues while `now <= lastProofAt + proofWindow`. Agent stops proving → accrual stops automatically.
 
 #### Function Signatures
 
 ```solidity
-interface IAgentPayrollEscrow {
-    // === Session Lifecycle ===
+interface IRivertingEscrow {
+    // ═══ Agent Registry (Curator) ═══
+    function registerAgent(
+        uint96  curatorRatePerSecond,
+        string  calldata metadataURI
+    ) external returns (uint256 agentId);
+
+    function updateAgent(
+        uint256 agentId,
+        uint96  curatorRatePerSecond,
+        string  calldata metadataURI
+    ) external;
+
+    function deactivateAgent(uint256 agentId) external;
+
+    // ═══ Sessions (User) ═══
     function createSession(
-        address agent,
-        address paymentToken,
-        uint96  ratePerSecond,
-        uint40  proofWindow,
-        uint40  minProofInterval,
+        uint256 agentId,
         uint128 depositAmount
     ) external returns (uint256 sessionId);
 
     function topUp(uint256 sessionId, uint128 amount) external;
-    function startSession(uint256 sessionId) external;
-    function pauseSession(uint256 sessionId) external;
-    function resumeSession(uint256 sessionId) external;
     function stopSession(uint256 sessionId) external;
 
-    // === Proof ===
+    // ═══ Proof (Platform only) ═══
     function submitProof(
         uint256 sessionId,
-        bytes32 proofHash,        // keccak256(sessionId, seq, outputHash, dataHash, blockNum)
-        string  calldata metadataURI  // pointer to full proof package (S3/IPFS)
+        bytes32 proofHash,
+        string  calldata metadataURI
     ) external;
 
-    function enforceProofTimeout(uint256 sessionId) external;
+    function enforceProofTimeout(uint256 sessionId) external; // Anyone
 
-    // === Payment ===
-    function claim(uint256 sessionId) external returns (uint128 amount);
+    // ═══ Settlement (Platform only) ═══
+    function claimEarnings(uint256 sessionId) external returns (uint128 amount);
+    function claimMultiple(uint256[] calldata sessionIds) external returns (uint128 total);
+
+    // ═══ Refund (User) ═══
     function refundUnused(uint256 sessionId) external returns (uint128 amount);
 
-    // === Views ===
-    function accruedAvailable(uint256 sessionId) external view returns (uint128);
+    // ═══ Views ═══
+    function getAgent(uint256 agentId) external view returns (Agent memory);
     function getSession(uint256 sessionId) external view returns (Session memory);
+    function accruedAvailable(uint256 sessionId) external view returns (uint128);
+    function userCostSoFar(uint256 sessionId) external view returns (uint128);
+    function sessionRate(uint256 agentId) external view returns (uint96 total, uint96 curator, uint96 platform);
 }
 ```
 
 #### Access Control
 
-| Function | Caller |
-|---|---|
-| `createSession`, `topUp`, `startSession`, `stopSession` | Employer only |
-| `pauseSession` | Employer only |
-| `resumeSession` | Employer only |
-| `submitProof` | Agent only (or approved operator) |
-| `enforceProofTimeout` | **Anyone** (permissionless — enables trustless timeout) |
-| `claim` | Agent only |
-| `refundUnused` | Employer only (after stop) |
+| Function | Caller | Notes |
+|---|---|---|
+| `registerAgent` | Anyone (becomes curator) | |
+| `updateAgent`, `deactivateAgent` | Curator of that agent | |
+| `createSession`, `topUp` | Any user | |
+| `stopSession` | User of that session | |
+| `submitProof` | **Platform only** (operator role) | Platform controls proof submission |
+| `enforceProofTimeout` | **Anyone** | Permissionless timeout trigger |
+| `claimEarnings`, `claimMultiple` | **Platform only** | Platform collects, settles off-chain |
+| `refundUnused` | User (after session stopped) | |
 
 #### Events
 
 ```solidity
-event SessionCreated(uint256 indexed sessionId, address indexed employer, address indexed agent,
-    address paymentToken, uint96 ratePerSecond, uint40 proofWindow, uint128 depositAmount);
+// Agent Registry
+event AgentRegistered(uint256 indexed agentId, address indexed curator,
+    uint96 curatorRate, string metadataURI);
+event AgentUpdated(uint256 indexed agentId, uint96 curatorRate, string metadataURI);
+event AgentDeactivated(uint256 indexed agentId);
+
+// Sessions
+event SessionCreated(uint256 indexed sessionId, uint256 indexed agentId,
+    address indexed user, uint128 deposit, uint96 totalRate);
 event SessionStarted(uint256 indexed sessionId, uint40 startedAt);
-event SessionPaused(uint256 indexed sessionId, bytes32 reason);
-event SessionResumed(uint256 indexed sessionId);
-event SessionStopped(uint256 indexed sessionId, uint128 agentEarned, uint128 employerRefund);
+event SessionStopped(uint256 indexed sessionId, uint128 totalAccrued, uint128 refunded);
 event SessionToppedUp(uint256 indexed sessionId, uint128 amount);
+
+// Proofs
 event ProofSubmitted(uint256 indexed sessionId, bytes32 indexed proofHash,
     string metadataURI, uint40 submittedAt);
 event ProofTimeout(uint256 indexed sessionId, uint40 lastProofAt, uint40 timeoutAt);
-event SalaryClaimed(uint256 indexed sessionId, address indexed agent, uint128 amount);
-event FundsRefunded(uint256 indexed sessionId, address indexed employer, uint128 amount);
+
+// Settlement
+event EarningsClaimed(uint256 indexed sessionId, address indexed platformWallet,
+    uint128 amount);
 event DepositExhausted(uint256 indexed sessionId);
+event FundsRefunded(uint256 indexed sessionId, address indexed user, uint128 amount);
 ```
 
 #### Implementation Notes
 
 - Use `SafeERC20` for all USDC transfers
-- Pack struct fields (`uint40`, `uint96`, `uint128`) for gas efficiency
-- `claim()` calls `_checkpoint()` before transfer
-- If deposit runs out during checkpoint → set `status = Paused`, emit `DepositExhausted`
+- Pack struct fields (`uint40`, `uint96`, `uint128`) for gas optimization
+- `claimEarnings()` calls `_checkpoint()` before transfer
 - Store proof details in **events**, not storage (gas saving)
+- `registerAgent()` is permissionless — anyone can become a curator
+- `createSession()` auto-starts the session (no separate start step for simplicity)
+- Platform fee rate is set at contract level, applies to all sessions
 
-### 3.3 Contract Deployment
+### 4.3 Demo Mode Settings
+
+| Parameter | Demo | Production |
+|---|---|---|
+| `platformFeeRate` | 300 ($0.0003/sec) | Configurable |
+| `proofWindow` | 10 seconds | 60-120 seconds |
+| `minProofInterval` | 3 seconds | 15-30 seconds |
+| Curator rate (example) | 1000 ($0.001/sec) | Curator-defined |
+
+### 4.4 Contract Deployment
 
 ```bash
-# Using Foundry
-forge create src/AgentPayrollEscrow.sol:AgentPayrollEscrow \
+# Foundry
+forge create src/RivertingEscrow.sol:RivertingEscrow \
+  --constructor-args $PLATFORM_WALLET $PLATFORM_FEE_RATE $USDC_ADDRESS \
   --rpc-url https://rpc.xlayer.tech \
   --private-key $DEPLOYER_KEY
 
 # Verify on OKLink
-forge verify-contract $CONTRACT_ADDRESS src/AgentPayrollEscrow.sol:AgentPayrollEscrow \
+forge verify-contract $CONTRACT_ADDRESS src/RivertingEscrow.sol:RivertingEscrow \
   --verifier-url "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/XLAYER" \
   --etherscan-api-key $OKLINK_API_KEY
 ```
 
-### 3.4 Demo Mode Settings
-
-| Parameter | Demo | Production |
-|---|---|---|
-| `ratePerSecond` | 1000 (≈ $0.001/sec) | Configurable |
-| `proofWindow` | 10 seconds | 60-120 seconds |
-| `minProofInterval` | 3 seconds | 15-30 seconds |
-
 ---
 
-## 4. Backend Services
+## 5. Backend Services
 
-### 4.1 Stack
+### 5.1 Stack
 
 - **Runtime**: Node.js 20+ / TypeScript
-- **Framework**: Express or Hono
+- **Framework**: Hono or Express
 - **Chain**: viem for X Layer reads/writes
-- **DB**: SQLite (hackathon simplicity) or Postgres
+- **DB**: SQLite (hackathon simplicity)
 - **Real-time**: SSE for live agent output
 - **OnchainOS**: REST API with HMAC-SHA256 auth
 
-### 4.2 Module Architecture
+### 5.2 Modules
 
-#### A. Session Orchestrator
+#### A. Agent Registry
 
-Manages the agent lifecycle in response to contract events.
+Stores and serves curator-uploaded skill configs.
 
 ```typescript
-interface AnalysisSession {
-  id: string;
-  sessionId: bigint;           // on-chain session ID
-  employerWallet: `0x${string}`;
-  agentWallet: `0x${string}`;
-  taskType: "pool-snapshot" | "yield-compare" | "token-flow";
-  target: string;              // pool address, token address, etc.
-  status: "idle" | "running" | "paused" | "completed" | "errored";
-  startedAt: string;
-  lastProofSeq: number;
+// API
+POST   /api/agents              — Register new agent (curator uploads config)
+GET    /api/agents               — List all active agents (catalog)
+GET    /api/agents/:id           — Get agent detail + config
+PUT    /api/agents/:id           — Update agent config (curator only)
+DELETE /api/agents/:id           — Deactivate agent (curator only)
+GET    /api/agents/:id/stats     — Usage stats (sessions, earnings)
+```
+
+Curator auth: wallet signature verification (EIP-712 or simple message signing).
+
+#### B. Instance Manager
+
+Spawns and manages agent instances per session.
+
+```typescript
+interface AgentInstance {
+  instanceId: string;
+  sessionId: bigint;
+  agentId: bigint;
+  skillConfig: AgentSkillConfig;    // Loaded from registry
+  status: "booting" | "running" | "paused" | "stopped";
+  llmSessionId: string;             // LLM provider session
+  createdAt: string;
 }
 
 // Core methods
-startSession(sessionId: bigint, taskConfig: TaskConfig): Promise<string>
-pauseSession(id: string, reason: string): Promise<void>
-resumeSession(id: string): Promise<void>
-stopSession(id: string): Promise<void>
+spawnInstance(sessionId: bigint, agentId: bigint): Promise<AgentInstance>
+pauseInstance(instanceId: string): Promise<void>
+resumeInstance(instanceId: string): Promise<void>
+stopInstance(instanceId: string): Promise<void>
 ```
 
-#### B. Proof Worker / Relayer
+How it works:
+1. Receives `SessionCreated` event from chain
+2. Loads skill config from Agent Registry by `agentId`
+3. Creates LLM session with curator's system prompt + tool definitions
+4. Starts the work loop (data fetch → analysis → output → proof)
+5. Manages lifecycle in response to contract events
 
-Runs on a timer (every 3-5 seconds). Builds proof packages and submits on-chain.
+#### C. Session Orchestrator
+
+Manages active sessions and coordinates between contract events + instances.
+
+```typescript
+// Listens to contract events:
+SessionCreated  → instanceManager.spawnInstance()
+ProofTimeout    → instanceManager.pauseInstance()
+SessionStopped  → instanceManager.stopInstance() + settlement.record()
+```
+
+#### D. Proof Worker / Relayer
+
+Same architecture as before, but proof submission is always from **platform's operator wallet** (not the agent/curator).
 
 ```typescript
 interface ProofPackage {
   sessionId: string;
   seq: number;
-  intervalStart: string;       // ISO timestamp
+  intervalStart: string;
   intervalEnd: string;
-  chainAnchors: Array<{
-    chain: string;
-    blockNumber: number;
-  }>;
   onchainOSCalls: Array<{
     api: "market" | "trade" | "wallet";
     endpoint: string;
-    resultHash: string;
-  }>;
-  rpcCalls: Array<{
-    method: string;
-    target: string;
     resultHash: string;
   }>;
   computedMetrics: Record<string, string | number>;
@@ -405,103 +637,118 @@ interface ProofPackage {
 }
 ```
 
-**Proof readiness rule**: Submit only if at least 2 of 4 are true since last proof:
-1. At least 1 OnchainOS API call executed
-2. At least 1 metric computed
-3. At least 1 user-visible output chunk produced
-4. At least 1 RPC read completed
+Every 3-5 seconds per active session:
+1. Check if instance produced new work
+2. Build proof package, hash it
+3. Upload package to storage
+4. Call `submitProof(sessionId, proofHash, metadataURI)` on-chain
 
-#### C. Event Indexer
+#### E. Settlement Service
 
-Watches X Layer for contract events via WebSocket:
+Tracks curator earnings off-chain. Handles batch payouts.
 
 ```typescript
-// wss://xlayerws.okx.com
+interface CuratorEarnings {
+  curatorWallet: string;
+  agentId: bigint;
+  totalEarned: bigint;           // Cumulative USDC earned
+  totalPaidOut: bigint;          // Already sent to curator
+  pendingPayout: bigint;         // totalEarned - totalPaidOut
+  sessions: SessionEarning[];    // Per-session breakdown
+}
+
+interface SessionEarning {
+  sessionId: bigint;
+  duration: number;              // Seconds
+  curatorRate: bigint;
+  totalCuratorEarning: bigint;   // duration * curatorRate
+  status: "active" | "settled";
+}
+```
+
+For hackathon: show earnings in dashboard, manual/batch payout.  
+For production: automated periodic on-chain transfers to curator wallets.
+
+#### F. Event Indexer
+
+Watches X Layer contract via WebSocket:
+
+```typescript
 const unwatch = publicClient.watchContractEvent({
-  address: PAYROLL_CONTRACT,
-  abi: agentPayrollEscrowAbi,
+  address: ESCROW_CONTRACT,
+  abi: rivertingEscrowAbi,
   onLogs: (logs) => {
     for (const log of logs) {
       switch (log.eventName) {
-        case 'SessionStarted': orchestrator.startSession(log.args); break;
-        case 'SessionPaused':  orchestrator.pauseSession(log.args); break;
-        case 'ProofTimeout':   orchestrator.handleTimeout(log.args); break;
-        case 'SalaryClaimed':  dashboard.notifyClaim(log.args); break;
+        case 'SessionCreated':  orchestrator.onSessionCreated(log.args); break;
+        case 'ProofTimeout':    orchestrator.onProofTimeout(log.args); break;
+        case 'SessionStopped':  orchestrator.onSessionStopped(log.args); break;
+        case 'EarningsClaimed': settlement.onClaimed(log.args); break;
       }
     }
   }
 });
 ```
 
-#### D. x402 Paywall Server
-
-See [Section 7](#7-x402-integration).
-
-### 4.3 OnchainOS API Integration
-
-#### Authentication
+### 5.3 OnchainOS API Integration
 
 ```typescript
-import crypto from 'crypto';
-
+// Authentication (HMAC-SHA256)
 function signRequest(timestamp: string, method: string, path: string, body: string): string {
   const prehash = timestamp + method.toUpperCase() + path + body;
   return crypto.createHmac('sha256', OKX_SECRET_KEY).update(prehash).digest('base64');
 }
 
-// Headers for every request:
-// OK-ACCESS-KEY: <api_key>
-// OK-ACCESS-TIMESTAMP: <ISO 8601 UTC>
-// OK-ACCESS-PASSPHRASE: <passphrase>
-// OK-ACCESS-SIGN: <hmac_signature>
+// Headers: OK-ACCESS-KEY, OK-ACCESS-TIMESTAMP, OK-ACCESS-PASSPHRASE, OK-ACCESS-SIGN
 ```
 
-#### Key API Endpoints Used
-
-| API | Endpoint | Purpose |
+| API | Endpoint | Agent Use |
 |---|---|---|
-| Market | `/api/v5/market/tickers` | Real-time token prices |
-| Market | `/api/v5/market/candles` | Historical price data |
-| Trade | `/api/v5/dex/aggregator/quote` | DEX swap quotes |
-| Trade | `/api/v5/dex/aggregator/swap` | Execute swaps (if needed) |
+| Market | `/api/v5/market/tickers` | Token prices |
+| Market | `/api/v5/market/candles` | Historical data |
+| Trade | `/api/v5/dex/aggregator/quote` | DEX quotes |
 | Wallet | `/api/v5/wallet/asset/balances` | Token balances |
-| Wallet | `/api/v5/wallet/asset/token-list` | Available tokens |
 
-#### OnchainOS MCP Integration (Optional)
-
-```typescript
-// Agent can use OnchainOS MCP skills directly
-// Reference: https://github.com/okx/onchainos-skills
-import { OnchainOSClient } from './onchainos-client';
-
-const os = new OnchainOSClient({ apiKey: OKX_API_KEY });
-const poolData = await os.market.getPoolData({ chainId: 196, poolAddress: '0x...' });
-const dexQuote = await os.trade.getQuote({ fromToken: 'USDC', toToken: 'OKB', amount: '100' });
-```
-
-### 4.4 Database Schema
+### 5.4 Database Schema
 
 ```sql
--- Sessions
-CREATE TABLE sessions (
-  id TEXT PRIMARY KEY,
-  onchain_session_id INTEGER NOT NULL,
-  employer_wallet TEXT NOT NULL,
-  agent_wallet TEXT NOT NULL,
-  task_type TEXT NOT NULL,
-  target TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'idle',
-  rate_per_second INTEGER NOT NULL,
-  proof_window_sec INTEGER NOT NULL,
+-- Agent configs (curator-uploaded)
+CREATE TABLE agents (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  onchain_agent_id INTEGER,         -- ID from contract registerAgent()
+  curator_wallet TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  category TEXT NOT NULL,
+  curator_rate_per_second INTEGER NOT NULL,
+  skill_config_json TEXT NOT NULL,   -- Full AgentSkillConfig JSON
+  metadata_uri TEXT,                 -- IPFS/HTTP pointer
+  active BOOLEAN DEFAULT TRUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Agent work steps (timeline)
+-- Active sessions
+CREATE TABLE sessions (
+  id TEXT PRIMARY KEY,
+  onchain_session_id INTEGER NOT NULL,
+  agent_id INTEGER NOT NULL REFERENCES agents(id),
+  user_wallet TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'created',
+  total_rate INTEGER NOT NULL,
+  curator_rate INTEGER NOT NULL,
+  platform_fee INTEGER NOT NULL,
+  deposit_amount INTEGER NOT NULL,
+  started_at DATETIME,
+  ended_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Agent work steps (live timeline)
 CREATE TABLE session_steps (
   id TEXT PRIMARY KEY,
   session_id TEXT NOT NULL REFERENCES sessions(id),
   seq INTEGER NOT NULL,
-  step_type TEXT NOT NULL,  -- 'rpc' | 'metric' | 'commentary' | 'finding'
+  step_type TEXT NOT NULL,           -- 'api' | 'rpc' | 'metric' | 'commentary' | 'finding'
   title TEXT NOT NULL,
   body TEXT NOT NULL,
   metadata_json TEXT,
@@ -519,19 +766,22 @@ CREATE TABLE proofs (
   submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Analysis reports
-CREATE TABLE reports (
+-- Curator earnings tracking
+CREATE TABLE curator_earnings (
   id TEXT PRIMARY KEY,
+  curator_wallet TEXT NOT NULL,
+  agent_id INTEGER NOT NULL REFERENCES agents(id),
   session_id TEXT NOT NULL REFERENCES sessions(id),
-  summary_json TEXT NOT NULL,
-  scores_json TEXT,
-  recommendation TEXT,
+  earned_amount INTEGER NOT NULL,    -- USDC units
+  paid_out BOOLEAN DEFAULT FALSE,
+  payout_tx_hash TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- x402 query sales
 CREATE TABLE query_sales (
   id TEXT PRIMARY KEY,
+  agent_id INTEGER NOT NULL REFERENCES agents(id),
   route TEXT NOT NULL,
   payer_address TEXT NOT NULL,
   amount_usdc TEXT NOT NULL,
@@ -542,303 +792,206 @@ CREATE TABLE query_sales (
 
 ---
 
-## 5. AI Agent Design
+## 6. Agent Runtime
 
-### 5.1 Architecture
+### 6.1 Unified LLM Runtime
 
-The agent is a **templated analyst** with a thin LLM layer. It does NOT autonomously trade or move funds.
+The platform runs ONE runtime that dynamically loads curator skill configs:
 
 ```
-┌─────────────────────────────────────────────┐
-│            DeFi Analyst Agent                │
-│                                             │
-│  1. Task Router                             │
-│     → classify request → select template    │
-│                                             │
-│  2. OnchainOS Data Layer                    │
-│     → Market API: prices, pools, volume     │
-│     → Trade API: DEX quotes, liquidity      │
-│     → Wallet API: balances, holdings        │
-│                                             │
-│  3. X Layer RPC (direct reads)              │
-│     → ERC-20 balances                       │
-│     → Pool state (slot0, liquidity)         │
-│     → Vault state (totalAssets, sharePrice) │
-│                                             │
-│  4. Metrics Engine                          │
-│     → Compute APY, utilization, IL risk     │
-│     → Structured numeric outputs            │
-│     → Code computes metrics, NOT LLM        │
-│                                             │
-│  5. LLM Summarizer (Claude/GPT)            │
-│     → Turn metrics into human-readable      │
-│     → Generate commentary + recommendations │
-│                                             │
-│  6. Proof Packager                          │
-│     → hash(output + data + blockNum)        │
-│     → Submit to contract every 3-5s         │
-└─────────────────────────────────────────────┘
+                    Instance Manager
+                         │
+                         │ load config
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│                  Unified LLM Runtime                 │
+│                                                      │
+│  For each active session:                            │
+│  ┌─────────────────────────────────────────────────┐│
+│  │  Agent Instance #N                               ││
+│  │                                                  ││
+│  │  System Prompt: [from curator config]            ││
+│  │  Tools: [from curator config]                    ││
+│  │  Model: [from curator config]                    ││
+│  │                                                  ││
+│  │  Work Loop:                                      ││
+│  │    1. Router: pick analysis template             ││
+│  │    2. Data: OnchainOS API + RPC reads            ││
+│  │    3. Metrics: code-computed (NOT LLM)           ││
+│  │    4. Summary: LLM narrates findings             ││
+│  │    5. Output: stream steps to SSE                ││
+│  │    6. Proof: package hash → Proof Worker         ││
+│  └─────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────┘
 ```
 
-### 5.2 Model Strategy
+### 6.2 Pre-built Analysis Templates
 
-| Role | Model | Why |
-|---|---|---|
-| Live reasoning + tool use | `gpt-4.1-mini` or `claude-3.5-haiku` | Low latency, low cost, frequent calls |
-| Final synthesis | `gpt-4.1` or `claude-sonnet` | Better summarization for reports |
+Curators reference these in their skill config. Platform provides the implementations.
 
-**Critical rule**: LLM never invents raw metrics. Code computes metrics from on-chain data. LLM only explains and summarizes.
+| Template ID | Description | Data Sources | Output |
+|---|---|---|---|
+| `pool-snapshot` | Analyze a DEX pool's health | Market API + RPC (slot0, liquidity) | TVL, volume, fee activity, risk flags |
+| `yield-compare` | Compare yield across pools/vaults | Market API + RPC | Risk-adjusted ranking, trends |
+| `token-flow` | Track token movement patterns | Wallet API + Trade API + RPC logs | Large transfers, whale activity |
 
-### 5.3 Analysis Templates (MVP: 3 only)
-
-#### A. Pool Health Snapshot
-- **Input**: Pool address on X Layer or cross-chain
-- **Data**: OnchainOS Market API + RPC reads (slot0, liquidity, fee, recent swap logs)
-- **Output**: Price, volume proxy, liquidity depth, fee activity, risk flags, recommendation
-- **Example**: "Analyze ETH/USDC 0.3% pool"
-
-#### B. Yield Comparison
-- **Input**: 2-3 token/pool addresses
-- **Data**: OnchainOS Market API for prices + RPC for vault/pool state
-- **Output**: Risk-adjusted yield ranking, deposit/withdraw trends, which option is stronger
-- **Example**: "Compare USDC yield across 3 pools"
-
-#### C. Token Flow Analysis
-- **Input**: Token address or wallet address
-- **Data**: OnchainOS Wallet API + Trade API + RPC event logs
-- **Output**: Large transfer tracking, whale movement, volume analysis
-- **Example**: "Analyze OKB flow on X Layer in last 24h"
-
-### 5.4 Agent Step Output Format
+### 6.3 Agent Step Format
 
 ```typescript
 type AgentStep = {
-  ts: string;                  // ISO timestamp
-  kind: "rpc" | "api" | "metric" | "commentary" | "finding";
-  title: string;               // Short description
-  body: string;                // Full content
+  ts: string;
+  kind: "api" | "rpc" | "metric" | "commentary" | "finding";
+  title: string;
+  body: string;
   metadata?: Record<string, unknown>;
 };
-
-// Examples:
-// { kind: "api",  title: "Fetching pool data from OnchainOS Market API" }
-// { kind: "rpc",  title: "Reading slot0() from X Layer pool" }
-// { kind: "metric", title: "Pool TVL: $2.4M, 24h Volume: $180K" }
-// { kind: "finding", title: "Volume/TVL ratio 7.5% suggests healthy activity" }
 ```
 
-### 5.5 Final Report Format
+### 6.4 Proof Definition
 
-```json
-{
-  "taskType": "pool-snapshot",
-  "target": "0x...",
-  "chain": "xlayer",
-  "anchorBlock": 12345678,
-  "summary": "This pool shows healthy trading activity with balanced liquidity.",
-  "scores": {
-    "liquidityHealth": 78,
-    "volumeActivity": 65,
-    "riskLevel": 32,
-    "yieldPotential": 71
-  },
-  "metrics": {
-    "tvl": "2400000",
-    "volume24h": "180000",
-    "feeRate": "0.003",
-    "currentPrice": "3124.22"
-  },
-  "recommendation": "Liquidity provision at current range is favorable given the volume/TVL ratio.",
-  "evidenceRefs": [
-    "xlayer:pool.slot0@12345678",
-    "onchainos:market.tickers@2026-03-24T10:00:00Z"
-  ]
-}
-```
+Proof = **verifiable liveness + evidence anchoring** (NOT semantic correctness).
 
-### 5.6 Proof Definition
+Every 3-5 seconds, the Proof Worker:
+1. Collects all steps since last proof
+2. Hashes: `keccak256(sessionId, seq, outputHash, dataSourcesHash, blockNumber)`
+3. Uploads full proof package to storage
+4. Submits hash on-chain
 
-For MVP, proof = **verifiable liveness + evidence anchoring**.
-
-A valid proof interval must include:
-- At least 1 real data fetch (OnchainOS API or RPC)
-- At least 1 computed metric
-- At least 1 user-visible output chunk
-- Hashes of those artifacts submitted on-chain
-
-What it proves: **the agent produced measurable work artifacts during this interval.**  
-What it does NOT prove: analytical correctness (that stays off-chain for hackathon).
+What it proves: agent produced measurable work in this interval.  
+What it doesn't prove: the analysis is correct (that's off-chain judgment).
 
 ---
 
-## 6. Frontend Architecture
+## 7. Frontend Architecture
 
-### 6.1 Pages
+### 7.1 Pages
 
 ```
-/                       Landing page — product explainer
-/employer               Employer dashboard — create + manage streams
-/session/[id]           Live work + salary stream page (THE DEMO PAGE)
-/reports/[id]           Final report page — post-analysis view
-/query                  Public paid-query page — x402 paywall
+/                       Landing — product explainer
+/curator                Curator dashboard — upload agents, view earnings
+/curator/agents/new     Upload new agent config
+/curator/agents/[id]    Edit agent + view stats
+/marketplace            User marketplace — browse + select agents
+/session/[id]           Live work + salary stream (THE DEMO PAGE)
+/query                  Spot query — x402 paywall
 ```
 
-### 6.2 Real-Time Strategy
+### 7.2 Real-Time Strategy
 
 | Source | Transport | Data |
 |---|---|---|
-| Agent steps + proof confirmations | **SSE** (one-way, simple) | AgentStep[], proof events |
-| On-chain state (accrued, status) | **Polling** (viem, every 2-3s) | accruedAvailable, session status |
-| Salary ticker | **Optimistic local** | `display += ratePerSecond` every 1s, reset on poll |
+| Agent steps + proof events | **SSE** | AgentStep[], proof confirmations |
+| On-chain state | **Polling** (viem, 2-3s) | accruedAvailable, session status |
+| Salary ticker | **Optimistic local** | `display += rate` per 1s, reset on poll |
 
-**Why SSE over WebSocket**: Simpler, one-way is sufficient for logs, less setup for 10-day sprint.
-
-**Optional upgrade**: Use X Layer WebSocket (`wss://xlayerws.okx.com`) to subscribe to `newHeads` for block-level freshness.
-
-### 6.3 Key Components
+### 7.3 Key Components
 
 ```
 /components/
 ├── wallet/
 │   └── ConnectWalletButton.tsx
-├── stream/
-│   ├── StreamControlPanel.tsx      — create/fund/start/pause/resume/stop
-│   ├── SalaryTicker.tsx            — animated USDC counter (THE visual hook)
-│   ├── ProofHeartbeatTimeline.tsx  — proof events on a timeline
-│   └── StreamStatusBadge.tsx       — RUNNING / PAUSED_NO_PROOF / STOPPED
+├── curator/
+│   ├── AgentConfigForm.tsx         — Upload skill config + set pricing
+│   ├── CuratorEarningsCard.tsx     — Total earned, pending payout
+│   └── AgentStatsCard.tsx          — Sessions count, usage hours
+├── marketplace/
+│   ├── AgentCatalogGrid.tsx        — Browse all agents
+│   ├── AgentCard.tsx               — Name, description, rate, curator
+│   ├── AgentDetailModal.tsx        — Full description + start session CTA
+│   └── CategoryFilter.tsx          — Filter by category
 ├── session/
-│   ├── AgentWorkTimeline.tsx       — live step-by-step work output
-│   ├── CurrentTaskCard.tsx         — what the agent is doing now
-│   └── MetricsGrid.tsx             — computed metrics cards
-├── reports/
-│   ├── ReportSummaryCard.tsx       — executive summary
-│   ├── ScoreCards.tsx              — health/risk/yield scores
-│   └── EvidenceTable.tsx           — proof references
+│   ├── SessionControlPanel.tsx     — Deposit, start, stop, top-up
+│   ├── SalaryTicker.tsx            — Animated USDC counter
+│   ├── CostBreakdown.tsx           — "Curator: $X | Platform: $Y | Total: $Z"
+│   ├── ProofHeartbeatTimeline.tsx  — Proof events timeline
+│   ├── StreamStatusBadge.tsx       — RUNNING / PAUSED / STOPPED
+│   ├── AgentWorkTimeline.tsx       — Live step-by-step output
+│   └── MetricsGrid.tsx             — Computed metrics cards
 └── query/
-    ├── X402PaywallCard.tsx         — price display + pay button
-    └── PaidResponseViewer.tsx      — unlocked analysis view
+    ├── X402PaywallCard.tsx
+    └── PaidResponseViewer.tsx
 ```
 
-### 6.4 Demo Visual Moments
+### 7.4 Demo Visual Moments
 
-1. **Salary counter ticking** — USDC incrementing every second (visual hook)
-2. **Proof heartbeat pulse** — green flash every 3-5s: "Proof Anchored on X Layer ✓"
-3. **Agent work appearing** — live timeline of data fetches → metrics → findings
-4. **THE KEY MOMENT**: Kill agent → proof stops → counter FREEZES → "No proof = no pay"
-5. **Recovery**: Resume agent → proof resumes → counter restarts
-6. **x402 query**: Public user pays $0.005 → response unlocks instantly
+1. **Curator uploads agent** → appears in marketplace instantly
+2. **User selects agent** → sees rate breakdown (curator + platform)
+3. **Session starts** → salary counter ticking, work timeline populating
+4. **Proof heartbeat** → green flash every 3s: "✓ Proof Anchored"
+5. **THE MOMENT**: Kill instance → proof stops → counter FREEZES
+6. **Recovery**: Restart → proof resumes → counter restarts
+7. **Settlement**: Session ends → shows split: "Curator earned $X, Platform earned $Y"
+8. **Spot query**: Public user pays $0.005 via x402 → instant unlock
 
 ---
 
-## 7. x402 Integration
+## 8. x402 Integration
 
-### 7.1 Role
+### 8.1 Role
 
-x402 powers **Use Case 2: Pay-per-query**. It does NOT power the streaming salary (that's the on-chain escrow).
+x402 powers **spot queries** — anyone can pay to query an agent's accumulated analysis. Does NOT power the streaming salary.
 
-### 7.2 Flow
-
-```
-User                            x402 Server                         Agent DB
- │                                   │                                  │
- │  GET /queries/pool-analysis       │                                  │
- │ ────────────────────────────────► │                                  │
- │                                   │                                  │
- │  HTTP 402                         │                                  │
- │  PAYMENT-REQUIRED:                │                                  │
- │  { price: "0.005",               │                                  │
- │    asset: "USDC",                │                                  │
- │    network: "xlayer" }           │                                  │
- │ ◄──────────────────────────────── │                                  │
- │                                   │                                  │
- │  Retry + PAYMENT-SIGNATURE        │                                  │
- │  (EIP-3009 signed authorization)  │                                  │
- │ ────────────────────────────────► │  fetch cached analysis           │
- │                                   │ ───────────────────────────────► │
- │  HTTP 200 + analysis result       │                                  │
- │ ◄──────────────────────────────── │ ◄─────────────────────────────── │
-```
-
-### 7.3 Endpoints
+### 8.2 Endpoints
 
 | Route | Price | Description |
 |---|---|---|
-| `GET /queries/report/:id/summary` | $0.001 | Brief summary of analysis |
-| `POST /queries/followup` | $0.003 | Ask a follow-up question |
-| `GET /queries/report/:id/evidence` | $0.005 | Full evidence package |
-| `POST /queries/pool-risk` | $0.005 | Custom pool risk analysis |
+| `GET /queries/agent/:id/summary` | $0.001 | Brief analysis summary |
+| `POST /queries/agent/:id/ask` | $0.003 | Ask a follow-up question |
+| `GET /queries/agent/:id/evidence` | $0.005 | Full evidence package |
 
-### 7.4 Implementation
+### 8.3 Implementation
 
-Use [x402-gateway-template](https://github.com/azep-ninja/x402-gateway-template) for fastest setup, or `@x402/express` middleware.
-
-```typescript
-// Abstract payment verification for swappability
-interface PaidAccessService {
-  verifyPayment(req: Request): Promise<PaymentResult>;
-  priceForRoute(route: string): PriceQuote;
-}
-
-// Implementations:
-// - X402ExactEVM (primary)
-// - MockApiKey (local dev)
-```
+Use [x402-gateway-template](https://github.com/azep-ninja/x402-gateway-template) or `@x402/express` middleware.
 
 ---
 
-## 8. On-Chain Transaction Strategy
+## 9. On-Chain Transaction Strategy
 
-### 8.1 Target: 50+ transactions
-
-Do NOT make each second = one payment tx. Proofs create the chain activity.
+### Target: 50+ transactions
 
 ```
 ┌──────────────────────────┬─────────┬─────────────────────────────────┐
 │ Transaction Type         │ Count   │ Detail                          │
 ├──────────────────────────┼─────────┼─────────────────────────────────┤
-│ USDC approve             │ 1-2     │ Approve contract to spend USDC  │
-│ createSession            │ 2-3     │ Multiple demo sessions          │
+│ registerAgent            │ 2-3     │ Curators register agents        │
+│ USDC approve             │ 2-3     │ Users approve escrow            │
+│ createSession            │ 3-4     │ Users start sessions            │
 │ topUp                    │ 1-2     │ Show funding mechanism          │
-│ startSession             │ 2-3     │ Activate streams                │
 │ submitProof              │ 30-40   │ Every 3-5s for 2-3 minutes      │
-│ pause / resume           │ 2-4     │ Demo accountability moment      │
-│ enforceProofTimeout      │ 1-2     │ Show permissionless timeout     │
-│ claim                    │ 3-5     │ Agent withdraws earned USDC     │
-│ stopSession              │ 1-2     │ Clean session termination       │
-│ x402 settlements         │ 5-10    │ Spot query payments             │
+│ enforceProofTimeout      │ 1-2     │ Permissionless timeout          │
+│ claimEarnings            │ 3-5     │ Platform collects               │
+│ stopSession              │ 2-3     │ Users end sessions              │
+│ refundUnused             │ 1-2     │ User gets remaining deposit     │
+│ x402 settlements         │ 5-8     │ Spot queries                    │
 ├──────────────────────────┼─────────┼─────────────────────────────────┤
-│ TOTAL                    │ 48-73   │ Comfortably exceeds 50 ✓        │
+│ TOTAL                    │ 50-72   │ Comfortably exceeds 50 ✓        │
 └──────────────────────────┴─────────┴─────────────────────────────────┘
 ```
 
-### 8.2 Margin Explanation
+### Margin Explanation
 
-> **Why this can only work on X Layer:**
->
-> - **Ethereum mainnet**: ERC-20 transfer ~$0.50-2.00. A single proof tx costs more than 500 seconds of agent salary.
-> - **Standard L2**: $0.01-0.05/tx. Still exceeds per-proof value. Fee volatility unpredictable.
-> - **X Layer**: Gas near-zero (OKB). Proof submission < $0.001. Every second of agent work is profitable. Flashblocks give 200ms preconfirmation for real-time UX.
+> **Why X Layer**: Ethereum mainnet charges ~$0.50-2.00 per ERC-20 transfer. A single proof tx costs more than 500 seconds of agent salary. X Layer gas is near-zero — every second of agent work is profitable. Flashblocks give 200ms preconfirmation for real-time UX.
 
 ---
 
-## 9. Project File Structure
+## 10. Project File Structure
 
 ```
 riverting/
 ├── README.md
 ├── docs/
-│   └── ARCHITECTURE.md          ← this file
+│   └── ARCHITECTURE.md
 │
 ├── contracts/
 │   ├── foundry.toml
 │   ├── src/
-│   │   ├── AgentPayrollEscrow.sol
+│   │   ├── RivertingEscrow.sol
 │   │   └── interfaces/
-│   │       └── IAgentPayrollEscrow.sol
+│   │       └── IRivertingEscrow.sol
 │   ├── script/
 │   │   └── Deploy.s.sol
 │   └── test/
-│       └── AgentPayrollEscrow.t.sol
+│       └── RivertingEscrow.t.sol
 │
 ├── backend/
 │   ├── package.json
@@ -846,29 +999,33 @@ riverting/
 │       ├── server.ts
 │       ├── config.ts
 │       ├── api/
-│       │   ├── streams.routes.ts
-│       │   ├── sessions.routes.ts
-│       │   └── queries.routes.ts
+│       │   ├── agents.routes.ts        — Agent registry CRUD
+│       │   ├── sessions.routes.ts      — Session management
+│       │   ├── curator.routes.ts       — Curator earnings/stats
+│       │   └── queries.routes.ts       — x402 paid queries
 │       ├── services/
+│       │   ├── registry/
+│       │   │   └── agentRegistry.ts
+│       │   ├── instance/
+│       │   │   └── instanceManager.ts
 │       │   ├── orchestrator/
-│       │   │   ├── sessionManager.ts
-│       │   │   └── streamEventHandler.ts
+│       │   │   ├── sessionOrchestrator.ts
+│       │   │   └── eventHandler.ts
 │       │   ├── proof/
 │       │   │   ├── proofBuilder.ts
 │       │   │   ├── proofRelayer.ts
 │       │   │   └── timeoutWatcher.ts
+│       │   ├── settlement/
+│       │   │   └── settlementService.ts
 │       │   ├── onchain/
 │       │   │   ├── xlayerClient.ts
 │       │   │   ├── contractClient.ts
 │       │   │   └── eventWatcher.ts
 │       │   ├── data/
 │       │   │   ├── onchainosClient.ts
-│       │   │   ├── marketAdapter.ts
-│       │   │   ├── tradeAdapter.ts
-│       │   │   └── rpcAdapter.ts
+│       │   │   └── adapters.ts
 │       │   ├── payments/
-│       │   │   ├── x402Server.ts
-│       │   │   └── pricing.ts
+│       │   │   └── x402Server.ts
 │       │   └── realtime/
 │       │       └── sseHub.ts
 │       ├── db/
@@ -880,19 +1037,16 @@ riverting/
 ├── agent/
 │   ├── package.json
 │   └── src/
-│       ├── index.ts
+│       ├── index.ts                    — Unified LLM runtime entry
+│       ├── runtime/
+│       │   ├── instanceRunner.ts       — Runs one agent instance
+│       │   └── configLoader.ts         — Loads skill config
 │       ├── prompts/
-│       │   ├── system.ts
 │       │   ├── poolSnapshot.ts
 │       │   ├── yieldCompare.ts
 │       │   └── tokenFlow.ts
-│       ├── runner/
-│       │   ├── analysisSession.ts
-│       │   ├── stepEmitter.ts
-│       │   └── reportSynthesizer.ts
 │       ├── tools/
 │       │   ├── readPoolState.ts
-│       │   ├── readVaultState.ts
 │       │   ├── readTokenFlow.ts
 │       │   └── computeMetrics.ts
 │       ├── proof/
@@ -905,22 +1059,24 @@ riverting/
 │   ├── package.json
 │   ├── next.config.ts
 │   ├── app/
-│   │   ├── page.tsx
-│   │   ├── employer/
-│   │   │   └── page.tsx
+│   │   ├── page.tsx                    — Landing
+│   │   ├── curator/
+│   │   │   ├── page.tsx                — Curator dashboard
+│   │   │   └── agents/
+│   │   │       ├── new/page.tsx        — Upload new agent
+│   │   │       └── [id]/page.tsx       — Edit agent + stats
+│   │   ├── marketplace/
+│   │   │   └── page.tsx                — Browse agents
 │   │   ├── session/
 │   │   │   └── [id]/
-│   │   │       └── page.tsx
-│   │   ├── reports/
-│   │   │   └── [id]/
-│   │   │       └── page.tsx
+│   │   │       └── page.tsx            — Live session
 │   │   └── query/
-│   │       └── page.tsx
+│   │       └── page.tsx                — Spot query
 │   ├── components/
 │   │   ├── wallet/
-│   │   ├── stream/
+│   │   ├── curator/
+│   │   ├── marketplace/
 │   │   ├── session/
-│   │   ├── reports/
 │   │   └── query/
 │   ├── lib/
 │   │   ├── api.ts
@@ -932,207 +1088,194 @@ riverting/
 │
 └── shared/
     ├── abis/
-    │   └── AgentPayrollEscrow.ts
+    │   └── RivertingEscrow.ts
     ├── config/
-    │   ├── chains.ts              — X Layer chain config (196)
-    │   ├── addresses.ts           — contract + USDC addresses
-    │   └── pricing.ts             — x402 pricing config
+    │   ├── chains.ts
+    │   ├── addresses.ts
+    │   └── pricing.ts
     └── types/
         └── common.ts
 ```
 
 ---
 
-## 10. 10-Day Build Plan
+## 11. 10-Day Build Plan
 
 ### Work Split
 
-- **Dev A**: Contracts + Backend + X Layer integration + x402
-- **Dev B**: Frontend + Agent + Demo UX
+- **Dev A**: Contract + Backend + X Layer + x402
+- **Dev B**: Frontend + Agent Runtime + Demo
 
 ```
 ┌───────────┬──────────────────────────────┬──────────────────────────────┐
-│ Day       │ Dev A (Contracts + Backend)  │ Dev B (Frontend + Agent)     │
+│ Day       │ Dev A (Contract + Backend)   │ Dev B (Frontend + Agent)     │
 ├───────────┼──────────────────────────────┼──────────────────────────────┤
-│ Day 1     │ Monorepo + Foundry setup     │ Next.js + wallet connect     │
-│           │ AgentPayrollEscrow skeleton  │ Employer page shell          │
-│           │ Deploy to X Layer testnet    │ Session page shell           │
-│           │ viem X Layer client          │ Design system tokens         │
+│ Day 1     │ Foundry + RivertingEscrow    │ Next.js + wallet connect     │
+│           │ Agent registry functions     │ Marketplace page shell       │
+│           │ Deploy to X Layer testnet    │ Curator page shell           │
+│           │ viem client setup            │ Session page shell           │
 │           │                              │                              │
-│ MILESTONE │ Contract compiles + deploys. Wallet connects to X Layer.    │
+│ MILESTONE │ registerAgent + createSession work on testnet. Pages render.│
 ├───────────┼──────────────────────────────┼──────────────────────────────┤
-│ Day 2     │ createSession, startSession  │ Employer form → contract     │
-│           │ claim, accruedAvailable      │ SalaryTicker component       │
-│           │ Unit tests for accrual math  │ Stream state cards           │
-│           │ Backend: POST /streams       │ Success/error TX UI          │
+│ Day 2     │ Session + accrual + claim    │ AgentConfigForm (curator)    │
+│           │ Settlement tracking logic    │ AgentCatalogGrid (marketplace)│
+│           │ Agent Registry API (CRUD)    │ SessionControlPanel (user)   │
+│           │ DB schema                    │ SalaryTicker + CostBreakdown │
 │           │                              │                              │
-│ MILESTONE │ Employer funds + starts stream. Agent can claim USDC. ✓     │
+│ MILESTONE │ Curator registers agent → user starts session → salary.     │
 ├───────────┼──────────────────────────────┼──────────────────────────────┤
-│ Day 3     │ submitProof + proofWindow    │ Mock agent runtime           │
-│           │ enforceProofTimeout          │ Live timeline UI             │
-│           │ Backend: proof relayer       │ Proof heartbeat component    │
-│           │ DB schema + session store    │ StreamStatusBadge            │
+│ Day 3     │ submitProof + proofWindow    │ Instance runner skeleton     │
+│           │ enforceProofTimeout          │ Mock agent output via SSE    │
+│           │ Proof relayer service        │ ProofHeartbeatTimeline       │
+│           │ Event watcher (WebSocket)    │ StreamStatusBadge            │
 │           │                              │                              │
-│ MILESTONE │ Proof tx lands every 5s. Timeout auto-pauses stream. ✓     │
+│ MILESTONE │ Proof every 3-5s. Timeout auto-pauses. Dashboard reacts.    │
 ├───────────┼──────────────────────────────┼──────────────────────────────┤
-│ Day 4     │ Event watcher (WebSocket)    │ SSE client hookup            │
-│           │ SSE endpoint for events      │ UI reacts to proof events    │
-│           │ pause/resume/stop logic      │ Paused state visuals         │
-│           │ Connect proof → heartbeat    │ "No proof" alert state       │
+│ Day 4     │ Instance Manager service     │ Config loader + real runtime │
+│           │ Skill config → LLM session   │ AgentWorkTimeline (live)     │
+│           │ SSE hub for step streaming   │ MetricsGrid component        │
+│           │ Orchestrator event handlers  │ Curator earnings page        │
 │           │                              │                              │
-│ MILESTONE │ Stream pauses visibly when proof stops. Counter freezes. ✓  │
+│ MILESTONE │ Curator's config drives agent behavior. Live work visible.  │
 ├───────────┼──────────────────────────────┼──────────────────────────────┤
-│ Day 5     │ OnchainOS API integration    │ Real agent → OnchainOS calls │
-│           │ Market + Trade adapters      │ Pool snapshot template       │
-│           │ Proof package builder        │ MetricsGrid component        │
-│           │ Evidence storage upload      │ Findings cards               │
+│ Day 5     │ OnchainOS API integration    │ Pool snapshot template       │
+│           │ Market + Trade adapters      │ Real agent → real data       │
+│           │ Proof package builder        │ FindingsCard component       │
 │           │                              │                              │
-│ MILESTONE │ Agent analyzes real X Layer pool data. Proofs contain real  │
-│           │ evidence hashes. ✓                                          │
+│ MILESTONE │ Agent analyzes real X Layer data. Proofs contain evidence.  │
 ├───────────┼──────────────────────────────┼──────────────────────────────┤
-│ Day 6     │ Second data adapter          │ Yield compare template       │
-│           │ Report persistence           │ Token flow template          │
-│           │ Report API endpoint          │ Report page + scorecards     │
+│ Day 6     │ Second template adapter      │ Yield compare template       │
+│           │ Settlement service complete  │ Token flow template          │
+│           │ Curator payout tracking      │ Curator stats + charts       │
 │           │                              │                              │
-│ MILESTONE │ 2-3 analysis types work. Final reports generated. ✓        │
+│ MILESTONE │ 2-3 agent types. Curator earnings tracked.                  │
 ├───────────┼──────────────────────────────┼──────────────────────────────┤
-│ Day 7     │ x402 middleware setup        │ Public query page            │
-│           │ Pricing config               │ Payment required state       │
-│           │ Receipt logging              │ Paid response viewer         │
-│           │ Paid endpoints (2-3)         │ Premium CTA on reports       │
+│ Day 7     │ x402 middleware              │ Spot query page              │
+│           │ Paid endpoints               │ X402PaywallCard              │
+│           │ Receipt logging              │ PaidResponseViewer           │
 │           │                              │                              │
-│ MILESTONE │ x402 pay-per-query works end-to-end. ✓                     │
+│ MILESTONE │ x402 pay-per-query end-to-end.                              │
 ├───────────┼──────────────────────────────┼──────────────────────────────┤
-│ Day 8     │ ──────────── INTEGRATION DAY ────────────                  │
-│           │ End-to-end testing           │ Full flow testing            │
-│           │ Edge case fixes              │ All pages connected          │
-│           │ X Layer mainnet deploy       │ Mainnet wallet config        │
+│ Day 8     │ ──────────── INTEGRATION ────────────                       │
+│           │ End-to-end: curator → user → session → proof → settle       │
+│           │ X Layer mainnet deploy       │ All pages connected          │
 │           │                              │                              │
-│ MILESTONE │ Full happy path on X Layer mainnet. 50+ txs verified. ✓    │
+│ MILESTONE │ Full three-party flow on mainnet. 50+ txs verified.         │
 ├───────────┼──────────────────────────────┼──────────────────────────────┤
-│ Day 9     │ Contract hardening           │ Animations + polish          │
-│           │ Demo mode config             │ Explorer links + tx badges   │
-│           │ Seed demo data               │ Pause/resume theater moment  │
-│           │ Fallback TX recordings       │ Mobile/tablet sanity pass    │
+│ Day 9     │ Edge cases + hardening       │ Animations + visual polish   │
+│           │ Demo mode config             │ Settlement breakdown UI      │
+│           │ Seed demo agents + data      │ Explorer links               │
 │           │                              │                              │
-│ MILESTONE │ Demo flow stable. Visual polish complete. ✓                │
+│ MILESTONE │ Demo stable. Visual polish complete.                        │
 ├───────────┼──────────────────────────────┼──────────────────────────────┤
 │ Day 10    │ Env freeze + final deploy    │ Rehearse 3-min demo          │
-│           │ Backup demo data capture     │ Record fallback video        │
-│           │ Pitch deck review            │ Submission prep              │
+│           │ Backup demo data             │ Record fallback video        │
+│           │ Pitch deck                   │ Submission prep              │
 │           │                              │                              │
-│ MILESTONE │ Production demo ready. Backup recording ready. Ship. ✓     │
+│ MILESTONE │ Ship.                                                       │
 └───────────┴──────────────────────────────┴──────────────────────────────┘
 ```
-
-### Daily Acceptance Checklist
-
-- **Day 2**: ☐ Fund stream ☐ Start stream ☐ Accrual increases ☐ Withdraw works
-- **Day 4**: ☐ Proof visible on-chain ☐ Missing proof pauses ☐ Dashboard shows pause
-- **Day 6**: ☐ Real DeFi analysis works ☐ Outputs readable ☐ Proof hashes match work
-- **Day 8**: ☐ x402 paid query works ☐ Mainnet deployed ☐ 50+ txs verified
-- **Day 10**: ☐ Full live run ☐ Fallback run ☐ Pitch rehearsed
 
 ### Cut Priority (if behind)
 
 1. ~~Third analysis template~~ — cut first
-2. ~~Advanced charts/sparklines~~ 
-3. ~~Auto-claim interval~~
+2. ~~Curator stats charts~~
+3. ~~x402 evidence endpoint~~
 4. ~~Mobile layout~~
-5. x402 endpoint — cut last
+5. x402 basic endpoint — cut last
 6. Proof-pause demo moment — **NEVER cut**
-7. Live salary ticker — **NEVER cut**
+7. Three-party settlement display — **NEVER cut**
+8. Salary ticker — **NEVER cut**
 
 ---
 
-## 11. Risk Mitigation
+## 12. Risk Mitigation
 
 ```
 ┌────────────────────────────────┬───────────────────────────────────────────┐
 │ Risk                           │ Mitigation                                │
 ├────────────────────────────────┼───────────────────────────────────────────┤
-│ X Layer DeFi ecosystem thin    │ Use OnchainOS Market/Trade APIs — they    │
-│                                │ aggregate across OKX ecosystem, not just  │
-│                                │ X Layer native. Can analyze cross-chain.  │
-│                                │ X Layer is the SETTLEMENT chain.          │
+│ X Layer DeFi ecosystem thin    │ OnchainOS aggregates across OKX ecosystem.│
+│                                │ Can analyze cross-chain data.             │
+│                                │ X Layer = settlement chain.               │
 ├────────────────────────────────┼───────────────────────────────────────────┤
-│ OnchainOS API immature         │ Fallback: direct X Layer RPC reads +      │
-│                                │ public APIs (CoinGecko, DefiLlama).       │
+│ OnchainOS API immature         │ Fallback: direct RPC + public APIs.       │
 │                                │ Agent adapters are swappable.             │
 ├────────────────────────────────┼───────────────────────────────────────────┤
 │ x402 integration complex       │ Use x402-gateway-template (Docker).       │
-│                                │ Worst case: x402 is nice-to-have,         │
-│                                │ streaming salary is core demo.            │
+│                                │ x402 is nice-to-have; streaming is core.  │
 ├────────────────────────────────┼───────────────────────────────────────────┤
-│ USDC liquidity on X Layer low  │ Demo uses small amounts ($1-5).           │
-│                                │ Self-bridge USDC via X Layer Bridge.      │
+│ Three-party adds scope         │ Curator dashboard is minimal: one form +  │
+│                                │ one earnings card. Marketplace is a grid. │
+│                                │ Settlement is DB tracking, not real-time. │
 ├────────────────────────────────┼───────────────────────────────────────────┤
-│ Proof feels fake to judges     │ Don't oversell as "AI correctness proof." │
-│                                │ Frame as liveness + evidence anchoring.   │
-│                                │ Show real data in dashboard alongside     │
-│                                │ proof hashes.                             │
+│ Multi-instance complexity      │ For hackathon: max 2-3 concurrent.        │
+│                                │ Instances share one process, not real VMs. │
 ├────────────────────────────────┼───────────────────────────────────────────┤
-│ Agent output quality           │ Code computes metrics (deterministic).    │
-│                                │ LLM only explains. Pre-test demo prompts. │
-│                                │ Fallback: deterministic metrics-only mode.│
+│ Proof feels fake               │ Frame as liveness + evidence anchoring.   │
+│                                │ Show real work alongside proof hashes.    │
 ├────────────────────────────────┼───────────────────────────────────────────┤
-│ Real-time UI flaky             │ SSE + polling (simple, reliable).         │
-│                                │ Optimistic local ticker between polls.    │
-│                                │ Flashblocks 200ms for near-instant conf.  │
+│ Agent output quality           │ Code computes metrics. LLM only explains. │
+│                                │ Pre-test demo prompts.                    │
 ├────────────────────────────────┼───────────────────────────────────────────┤
-│ Gas costs add up               │ X Layer gas near-zero (OKB).              │
-│                                │ Demo 60+ txs total gas < $0.01.           │
-├────────────────────────────────┼───────────────────────────────────────────┤
-│ Smart contract bug in demo     │ Keep contract tiny (~200 lines).          │
-│                                │ Test accrual math extensively.            │
-│                                │ Demo happy path only if edge cases break. │
+│ Gas costs                      │ X Layer near-zero. 60+ txs < $0.01.      │
 └────────────────────────────────┴───────────────────────────────────────────┘
 ```
 
 ---
 
-## 12. Demo Choreography
+## 13. Demo Choreography
 
 ### 3-Minute Demo Script
 
-**0:00 – 0:30 | Problem**
-> "AI agents can now do real financial analysis. But how do you pay them? Upfront subscriptions waste money on idle time. Per-project payments require trust that the agent will deliver. There's no pay-as-you-go model for AI labor."
+**Scene 1: Curator Onboarding (0:00–0:30)**
+> Curator opens dashboard → uploads "DeFi Pool Analyst" config:
+> - System prompt, tools, pricing ($0.001/sec)
+> - Submit → agent appears in marketplace
+> - "Anyone can be an AI agent creator. Upload a skill config, set your price."
 
-**0:30 – 1:30 | Live Demo**
-1. Employer connects wallet, deposits 5 USDC
-2. Starts stream at $0.001/sec for Pool Health Snapshot
-3. Agent begins analyzing — live timeline shows data fetches → metrics → findings
-4. Salary counter ticks up: $0.001… $0.002… $0.003…
-5. Every 3 seconds: "✓ Proof Anchored on X Layer" appears on timeline
-6. OKLink explorer shows tx hashes in real-time
+**Scene 2: User Discovery (0:30–0:50)**
+> User opens marketplace → browses agents → selects "DeFi Pool Analyst"
+> - Sees rate breakdown: "$0.001/sec to curator + $0.0003/sec platform = $0.0013/sec"
+> - Deposits 5 USDC → starts session
 
-**1:30 – 2:00 | The Moment**
-7. **Kill the agent process**
-8. Proof stops arriving
-9. After 10 seconds: **counter FREEZES** — "⚠️ PAUSED: No Proof Detected"
-10. "You only pay for work that actually happens."
-11. Resume agent → proof resumes → counter restarts
+**Scene 3: Streaming Work (0:50–1:40)**
+> Agent starts analyzing:
+> - Live timeline: data fetches → metrics → findings
+> - Salary counter ticking: $0.001… $0.005… $0.010…
+> - Every 3 seconds: "✓ Proof Anchored on X Layer"
+> - Cost breakdown updating in real-time
 
-**2:00 – 2:30 | x402**
-12. Switch to public query page
-13. "Anyone can ask this agent a question for $0.005"
-14. Submit query → HTTP 402 → pay → analysis unlocks
-15. "Two monetization modes: retained salary + spot queries."
+**Scene 4: Accountability (1:40–2:10)**
+> Kill agent instance → proof stops
+> - 10 seconds later: counter FREEZES → "⚠️ PAUSED: No Proof"
+> - "You only pay for work that actually happens."
+> - Restart instance → proof resumes → counter restarts
 
-**2:30 – 3:00 | Numbers + Vision**
-16. "This demo ran 60+ on-chain transactions. Total gas: $0.008."
-17. "On Ethereum mainnet, the gas alone would cost more than the agent's entire salary."
-18. "Every AI agent that does work deserves to get paid for exactly what it does — not more, not less. That's Riverting."
+**Scene 5: x402 Spot Query (2:10–2:30)**
+> Public user queries agent for $0.005 via x402
+> - HTTP 402 → pay → analysis unlocks
+> - "Two ways to monetize: streaming salary + spot queries"
+
+**Scene 6: Settlement (2:30–2:50)**
+> Session ends → settlement breakdown:
+> - Total: $0.065
+> - Curator earned: $0.050
+> - Platform earned: $0.015
+> - Curator earnings dashboard updates
+
+**Scene 7: Vision (2:50–3:00)**
+> "Three parties. One payment stream. 60+ on-chain transactions. Total gas: $0.008."
+> "Curators build AI agents. Users pay per-second. The platform settles everything."
+> "That's Riverting."
 
 ### 60-Second Pitch
 
-> "AI agents 開始能做真實的鏈上工作了。但誰來為它們的時間付費？"
+> "AI agents are getting smarter every day. But there's no marketplace where creators can monetize them per-second and users can pay only for actual work done."
 >
-> "Riverting 讓 AI agent 按秒領薪。Demo 裡的 DeFi 分析師用 OKX OnchainOS 實時分析鏈上數據，每 3 秒提交一次 proof-of-work。employer 看到工作和薪資同步流動。Agent 停工？Proof 斷了，錢立刻停。"
+> "Riverting is a three-party AI agent marketplace on X Layer. Curators upload skill configs and set their price. Users browse, select, and pay per-second while watching the agent work live. Every 3 seconds, a proof-of-work is anchored on-chain. No proof? Payment stops instantly."
 >
-> "同一個 agent 還通過 x402 賣單次分析 — $0.005 一次查詢，HTTP 402 自動收費。"
->
-> "60+ 筆鏈上交易，total gas < $0.01。這種每秒結算 + 每次驗證的模式，只有在 X Layer 的零 gas 環境下才成立。"
+> "60+ on-chain transactions. Total gas under $0.01. Revenue splits automatically between curator and platform. This is only possible on X Layer's zero-gas infrastructure."
 
 ---
 
@@ -1144,15 +1287,11 @@ riverting/
 | OnchainOS Dev Docs | https://web3.okx.com/onchainos/dev-docs/wallet/onchain-gateway-api-reference |
 | OnchainOS Skills (GitHub) | https://github.com/okx/onchainos-skills |
 | x402 Protocol | https://www.x402.org/ |
-| x402 Docs | https://docs.x402.org/introduction |
-| x402 Go Implementation | https://github.com/mark3labs/x402-go |
 | x402 Gateway Template | https://github.com/azep-ninja/x402-gateway-template |
 | X Layer RPC | https://rpc.xlayer.tech |
 | X Layer WebSocket | wss://xlayerws.okx.com |
-| X Layer Flashblocks RPC | https://rpc.xlayer.tech/flashblocks |
-| X Layer Explorer (OKLink) | https://www.oklink.com/xlayer |
-| Superfluid (reference) | https://docs.superfluid.zone/ |
-| Sablier (reference) | https://app.sablier.com/ |
+| X Layer Flashblocks | https://rpc.xlayer.tech/flashblocks |
+| X Layer Explorer | https://www.oklink.com/xlayer |
 
 ## Appendix B: Environment Variables
 
@@ -1162,13 +1301,14 @@ XLAYER_RPC_URL=https://rpc.xlayer.tech
 XLAYER_WS_URL=wss://xlayerws.okx.com
 XLAYER_CHAIN_ID=196
 
-# Contracts (after deployment)
-PAYROLL_CONTRACT_ADDRESS=
-USDC_ADDRESS=              # Bridged USDC on X Layer
+# Contracts
+ESCROW_CONTRACT_ADDRESS=
+USDC_ADDRESS=
 
-# Wallets
+# Platform
+PLATFORM_WALLET=
+PLATFORM_OPERATOR_KEY=         # For submitting proofs
 DEPLOYER_PRIVATE_KEY=
-AGENT_PRIVATE_KEY=
 
 # OnchainOS
 OKX_API_KEY=
@@ -1176,14 +1316,14 @@ OKX_SECRET_KEY=
 OKX_PASSPHRASE=
 
 # AI
-OPENAI_API_KEY=            # or ANTHROPIC_API_KEY
+OPENAI_API_KEY=
 AI_MODEL_LIVE=gpt-4.1-mini
 AI_MODEL_SYNTHESIS=gpt-4.1
 
 # x402
-X402_PAYMENT_ADDRESS=      # Address to receive x402 payments
+X402_PAYMENT_ADDRESS=
 X402_NETWORK=xlayer
 
 # Database
-DATABASE_URL=file:./dev.db  # SQLite for hackathon
+DATABASE_URL=file:./dev.db
 ```
