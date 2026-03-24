@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
@@ -80,6 +80,33 @@ function seedAgents(): void {
   insertMany();
 }
 
+function parseFrontmatter(content: string): { name: string; description: string; body: string } | null {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)/)
+  if (!match) return null
+  const fm = match[1]
+  return {
+    name: fm.match(/name:\s*(.*)/)?.[1]?.trim() || 'Unnamed Skill',
+    description: fm.match(/description:\s*(.*)/)?.[1]?.trim() || '',
+    body: match[2].trim(),
+  }
+}
+
+function inferCategory(name: string, desc: string): string {
+  const n = name.toLowerCase()
+  const text = `${name} ${desc}`.toLowerCase()
+  // Check name first for strong signals
+  if (n.includes('nft')) return 'nft'
+  if (n.includes('security') || n.includes('audit')) return 'security'
+  if (n.includes('trading') || n.includes('signal')) return 'trading'
+  if (n.includes('defi') || n.includes('onchain') || n.includes('on-chain')) return 'defi'
+  // Fallback to description
+  if (text.includes('nft') || text.includes('collection') || text.includes('floor price')) return 'nft'
+  if (text.includes('secur') || text.includes('audit') || text.includes('vulnerab')) return 'security'
+  if (text.includes('trad') || text.includes('signal') || text.includes('momentum')) return 'trading'
+  if (text.includes('defi') || text.includes('pool') || text.includes('vault') || text.includes('dex')) return 'defi'
+  return 'general'
+}
+
 function seedSkillsFromDir(): number {
   const db = getDb();
   const skillsRoot = resolve(__dirname, '../../../skills');
@@ -95,146 +122,82 @@ function seedSkillsFromDir(): number {
   `);
 
   const CURATOR = '0x0000000000000000000000000000000000000000';
+  const defaultSchema = JSON.stringify({
+    type: 'object',
+    properties: { query: { type: 'string' }, address: { type: 'string' }, chain: { type: 'string' } },
+    required: ['query'],
+  });
   let count = 0;
 
-  // Look for defi-onchain-analytics
-  const skillDir = resolve(skillsRoot, 'defi-onchain-analytics-main');
-  if (!existsSync(skillDir)) return 0;
+  // Scan all directories under skills/
+  const dirs = readdirSync(skillsRoot, { withFileTypes: true })
+    .filter(d => d.isDirectory() && !d.name.startsWith('.'))
 
-  // Read SKILL.md for the main system prompt
-  const skillMd = readFileSync(resolve(skillDir, 'SKILL.md'), 'utf-8');
+  const seedAll = db.transaction(() => {
+    for (const dir of dirs) {
+      const skillDir = resolve(skillsRoot, dir.name);
+      const skillMdPath = resolve(skillDir, 'SKILL.md');
+      if (!existsSync(skillMdPath)) continue;
 
-  // Parse frontmatter
-  const fmMatch = skillMd.match(/^---\n([\s\S]*?)\n---/);
-  const mainDesc = fmMatch
-    ? (fmMatch[1].match(/description:\s*(.*)/)?.[1] || '').trim()
-    : 'DeFi on-chain analytics skill';
+      const skillMd = readFileSync(skillMdPath, 'utf-8');
+      const parsed = parseFrontmatter(skillMd);
+      if (!parsed) continue;
 
-  // Master skill — uses full SKILL.md as system prompt
-  insert.run({
-    $id: randomUUID(),
-    $creator: CURATOR,
-    $name: 'DeFi On-Chain Analytics',
-    $desc: 'Full-spectrum on-chain DeFi analysis: wallet profiling, protocol assessment, DEX analytics, token metrics, contract inspection, and exploit tracing across EVM chains.',
-    $category: 'defi',
-    $systemPrompt: skillMd.slice(skillMd.indexOf('---', 3) + 4).trim().slice(0, 8000),
-    $userPromptTemplate: 'Analyze: {{query}}\n\nChain: {{chain}}\nTarget address (if any): {{address}}',
-    $model: 'gemini-2.0-flash',
-    $temperature: 0.2,
-    $maxTokens: 2048,
-    $inputSchema: JSON.stringify({
-      type: 'object',
-      properties: {
-        query: { type: 'string' },
-        chain: { type: 'string' },
-        address: { type: 'string' },
-      },
-      required: ['query'],
-    }),
-    $price: 5000,
-    $mode: 'stream',
-    $metadataUri: 'https://github.com/Omnis-Labs/defi-onchain-analytics',
-  });
-  count++;
+      const category = inferCategory(parsed.name, parsed.description);
+      const displayName = parsed.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-  // Individual pattern skills
-  const patterns: Array<{ file: string; name: string; desc: string; template: string; schema: Record<string, unknown> }> = [
-    {
-      file: 'wallet-analytics.md',
-      name: 'Wallet Profiler',
-      desc: 'Profile any EVM wallet: balance snapshots, transfer history, entity clustering, funding trace, Sybil detection, and smart money signals.',
-      template: 'Profile wallet {{address}} on {{chain}}.\n\nFocus: {{focus}}',
-      schema: {
-        type: 'object',
-        properties: { address: { type: 'string' }, chain: { type: 'string' }, focus: { type: 'string' } },
-        required: ['address'],
-      },
-    },
-    {
-      file: 'protocol-analytics.md',
-      name: 'Protocol Analyzer',
-      desc: 'Analyze DeFi protocols: TVL decomposition, admin risk assessment, oracle health, governance participation, and lending market monitoring.',
-      template: 'Analyze protocol at {{address}} on {{chain}}.\n\nObjective: {{objective}}',
-      schema: {
-        type: 'object',
-        properties: { address: { type: 'string' }, chain: { type: 'string' }, objective: { type: 'string' } },
-        required: ['address'],
-      },
-    },
-    {
-      file: 'dex-analytics.md',
-      name: 'DEX Analyst',
-      desc: 'Analyze DEX pools: Uniswap V3 math, LP position analytics, swap volume, MEV filtering, liquidity depth, and automated market maker signals.',
-      template: 'Analyze DEX pool {{address}} on {{chain}}.\n\nFocus: {{focus}}',
-      schema: {
-        type: 'object',
-        properties: { address: { type: 'string' }, chain: { type: 'string' }, focus: { type: 'string' } },
-        required: ['address'],
-      },
-    },
-    {
-      file: 'token-analytics.md',
-      name: 'Token Inspector',
-      desc: 'Audit token metrics: holder distribution, supply analysis (total/circulating/locked/burned), concentration metrics (Gini, HHI), and vesting schedules.',
-      template: 'Inspect token {{address}} on {{chain}}.\n\nAnalysis type: {{analysis_type}}',
-      schema: {
-        type: 'object',
-        properties: { address: { type: 'string' }, chain: { type: 'string' }, analysis_type: { type: 'string' } },
-        required: ['address'],
-      },
-    },
-    {
-      file: 'clamm-vault-analytics.md',
-      name: 'CLAMM Vault Analyzer',
-      desc: 'Analyze concentrated liquidity vaults: rebalance decomposition, fee separation, share-price time series, HODL benchmarks, and LVR estimation.',
-      template: 'Analyze CLAMM vault {{address}} on {{chain}}.\n\nTime period: {{period}}',
-      schema: {
-        type: 'object',
-        properties: { address: { type: 'string' }, chain: { type: 'string' }, period: { type: 'string' } },
-        required: ['address'],
-      },
-    },
-    {
-      file: 'contract-inspection.md',
-      name: 'Contract Inspector',
-      desc: 'Inspect smart contracts: proxy detection, storage layout analysis, event decoding, ABI resolution, and upgrade pattern identification.',
-      template: 'Inspect contract {{address}} on {{chain}}.\n\nQuestion: {{question}}',
-      schema: {
-        type: 'object',
-        properties: { address: { type: 'string' }, chain: { type: 'string' }, question: { type: 'string' } },
-        required: ['address'],
-      },
-    },
-  ];
-
-  const patternsDir = resolve(skillDir, 'patterns');
-  const insertMany = db.transaction(() => {
-    for (const p of patterns) {
-      const patternPath = resolve(patternsDir, p.file);
-      if (!existsSync(patternPath)) continue;
-      const content = readFileSync(patternPath, 'utf-8');
-      const systemPrompt = content.slice(0, 8000);
-
+      // Master skill from SKILL.md
       insert.run({
         $id: randomUUID(),
         $creator: CURATOR,
-        $name: p.name,
-        $desc: p.desc,
-        $category: 'defi',
-        $systemPrompt: systemPrompt,
-        $userPromptTemplate: p.template,
+        $name: displayName,
+        $desc: parsed.description,
+        $category: category,
+        $systemPrompt: parsed.body.slice(0, 8000),
+        $userPromptTemplate: '{{query}}\n\nChain: {{chain}}\nTarget: {{address}}',
         $model: 'gemini-2.0-flash',
         $temperature: 0.2,
         $maxTokens: 2048,
-        $inputSchema: JSON.stringify(p.schema),
-        $price: 3000,
-        $mode: 'once',
-        $metadataUri: 'https://github.com/Omnis-Labs/defi-onchain-analytics',
+        $inputSchema: defaultSchema,
+        $price: 5000,
+        $mode: 'stream',
+        $metadataUri: null,
       });
       count++;
+      console.log(`  [master] ${displayName}`);
+
+      // Pattern sub-skills
+      const patternsDir = resolve(skillDir, 'patterns');
+      if (!existsSync(patternsDir)) continue;
+
+      const patternFiles = readdirSync(patternsDir).filter(f => f.endsWith('.md'));
+      for (const pf of patternFiles) {
+        const content = readFileSync(resolve(patternsDir, pf), 'utf-8');
+        const patternName = pf.replace('.md', '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const firstLine = content.split('\n').find(l => l.startsWith('# '))?.slice(2) || patternName;
+
+        insert.run({
+          $id: randomUUID(),
+          $creator: CURATOR,
+          $name: firstLine,
+          $desc: `${firstLine} — from ${displayName} skill pack`,
+          $category: category,  // inherit from master
+          $systemPrompt: content.slice(0, 8000),
+          $userPromptTemplate: '{{query}}\n\nTarget: {{address}}\nChain: {{chain}}',
+          $model: 'gemini-2.0-flash',
+          $temperature: 0.2,
+          $maxTokens: 2048,
+          $inputSchema: defaultSchema,
+          $price: 3000,
+          $mode: 'once',
+          $metadataUri: null,
+        });
+        count++;
+        console.log(`  [pattern] ${firstLine}`);
+      }
     }
   });
-  insertMany();
+  seedAll();
 
   return count;
 }
