@@ -4,16 +4,16 @@ export default function CategoryFilter({ categories, selected, onChange }: {
   onChange: (cat: string) => void
 }) {
   return (
-    <div className="flex gap-2 flex-wrap">
+    <div className="flex space-x-8">
       {categories.map(cat => (
         <button
           key={cat}
           type="button"
           onClick={() => onChange(cat)}
-          className={`px-4 py-1.5 rounded-full text-sm capitalize transition-colors ${
+          className={`text-xs uppercase tracking-widest border-b pb-1 transition-colors ${
             selected === cat
-              ? 'bg-[#00d4aa] text-black font-semibold'
-              : 'bg-[#111] border border-[#222] text-[#888] hover:border-[#00d4aa]'
+              ? 'border-text-primary text-text-primary font-bold'
+              : 'border-transparent text-text-tertiary hover:border-text-primary hover:text-text-primary'
           }`}
         >
           {cat}
