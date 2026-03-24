@@ -16,8 +16,10 @@ import { instanceManager } from './services/instance/instanceManager.js';
 
 const app = new Hono();
 
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3001,http://localhost:3002').split(',').map(s => s.trim())
+
 app.use('*', cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
+  origin: allowedOrigins,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'X-Payment', 'Last-Event-ID', 'X-Wallet-Address', 'X-Signature', 'X-Timestamp'],
 }));

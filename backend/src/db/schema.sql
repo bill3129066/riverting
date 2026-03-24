@@ -56,8 +56,11 @@ CREATE TABLE IF NOT EXISTS curator_earnings (
   earned_amount INTEGER NOT NULL,
   paid_out INTEGER NOT NULL DEFAULT 0,
   payout_tx_hash TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(session_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_curator_earnings_wallet ON curator_earnings(curator_wallet);
 
 CREATE TABLE IF NOT EXISTS query_sales (
   id TEXT PRIMARY KEY,

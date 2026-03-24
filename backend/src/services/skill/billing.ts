@@ -38,22 +38,24 @@ export function deposit(wallet: string, amount: number): UserBalance {
  * Returns true if charge succeeded, false if insufficient balance.
  * If price is 0, always succeeds (free skill).
  */
+/**
+ * Atomically charge a user. Uses WHERE balance >= amount to prevent
+ * race conditions where concurrent requests overdraft the account.
+ * Returns true if charge succeeded, false if insufficient balance.
+ */
 export function charge(wallet: string, amount: number): boolean {
   if (amount <= 0) return true
 
   const db = getDb()
   const w = wallet.toLowerCase()
 
-  const bal = getBalance(w)
-  if (bal.balance < amount) return false
-
-  db.prepare(`
+  const result = db.prepare(`
     UPDATE user_balances SET
       balance = balance - $amount,
       total_spent = total_spent + $amount,
       updated_at = datetime('now')
-    WHERE wallet = $wallet
+    WHERE wallet = $wallet AND balance >= $amount
   `).run({ $wallet: w, $amount: amount })
 
-  return true
+  return result.changes > 0
 }
