@@ -156,7 +156,7 @@ interface AgentSkillConfig {
 
   // AI Configuration
   systemPrompt: string;            // The core instructions
-  model: "gpt-4.1-mini" | "claude-sonnet"; // Preferred model
+  model: "gemini-2.0-flash" | "gemini-2.5-pro-exp-03-25"; // Preferred model
   temperature: number;
 
   // Tools & Data Access
@@ -1315,10 +1315,10 @@ OKX_API_KEY=
 OKX_SECRET_KEY=
 OKX_PASSPHRASE=
 
-# AI
-OPENAI_API_KEY=
-AI_MODEL_LIVE=gpt-4.1-mini
-AI_MODEL_SYNTHESIS=gpt-4.1
+# AI (Google AI Studio)
+GEMINI_API_KEY=
+AI_MODEL_LIVE=gemini-2.0-flash
+AI_MODEL_SYNTHESIS=gemini-2.5-pro-exp-03-25
 
 # x402
 X402_PAYMENT_ADDRESS=

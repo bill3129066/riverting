@@ -39,7 +39,7 @@ function seedAgents(): void {
       $skill_config_json: JSON.stringify({
         name: 'DeFi Pool Analyst',
         analysisTemplates: ['pool-snapshot'],
-        model: 'gpt-4.1-mini',
+        model: 'gemini-2.0-flash',
         tools: [{ type: 'onchainos-market', description: 'Fetch pool data' }],
       }),
       $metadata_uri: null,
@@ -53,7 +53,7 @@ function seedAgents(): void {
       $skill_config_json: JSON.stringify({
         name: 'Yield Comparator',
         analysisTemplates: ['yield-compare'],
-        model: 'gpt-4.1-mini',
+        model: 'gemini-2.0-flash',
         tools: [{ type: 'onchainos-market', description: 'Fetch yield data' }],
       }),
       $metadata_uri: null,

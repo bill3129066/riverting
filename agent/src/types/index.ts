@@ -24,6 +24,6 @@ export interface InstanceConfig {
   sessionId: string
   agentId: number
   backendUrl: string
-  openaiApiKey: string
+  geminiApiKey: string
   target?: string
 }

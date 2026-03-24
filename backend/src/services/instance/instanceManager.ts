@@ -32,12 +32,12 @@ class InstanceManager {
 
     const instanceId = randomUUID()
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001'
-    const openaiApiKey = process.env.OPENAI_API_KEY || ''
+    const geminiApiKey = process.env.GEMINI_API_KEY || ''
 
     console.log(`[InstanceManager] Spawning instance ${instanceId} for session ${sessionId}`)
 
     const runner = new InlineAgentRunner(
-      { sessionId, agentId, backendUrl, openaiApiKey },
+      { sessionId, agentId, backendUrl, geminiApiKey },
       (step) => {
         const db = getDb()
         const stepId = randomUUID()
@@ -132,7 +132,7 @@ interface RunnerConfig {
   sessionId: string
   agentId: number
   backendUrl: string
-  openaiApiKey: string
+  geminiApiKey: string
 }
 
 class InlineAgentRunner {

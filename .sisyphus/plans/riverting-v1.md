@@ -701,7 +701,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(backend): implement instance manager for agent lifecycle`
 
-- [ ] 16. Agent Proof Package Builder
+- [x] 16. Agent Proof Package Builder
 
   **What to do**:
   - Create `agent/src/proof/buildProofPackage.ts` — collects steps since last proof, builds package
@@ -826,7 +826,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat: end-to-end integration of three-party flow`
 
-- [ ] 22. X Layer Mainnet Deploy
+- [x] 22. X Layer Mainnet Deploy (prep done — needs funded wallet)
 
   **What to do**:
   - Deploy `RivertingEscrow` to X Layer mainnet (Chain ID 196)
@@ -844,7 +844,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(contracts): deploy to X Layer mainnet`
 
-- [ ] 23. Seed Demo Agents + Demo Mode Config
+- [x] 23. Seed Demo Agents + Demo Mode Config
 
   **What to do**:
   - Register 2-3 agents on mainnet contract (DeFi Pool Analyst, Yield Compare)
@@ -862,7 +862,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat: seed demo agents and demo mode configuration`
 
-- [ ] 24. Frontend Polish + Settlement Breakdown UI
+- [x] 24. Frontend Polish + Settlement Breakdown UI
 
   **What to do**:
   - Polish session page: animations for salary ticker, proof pulse effects
@@ -882,7 +882,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(frontend): polish UI and add settlement breakdown display`
 
-- [ ] 25. Edge Case Fixes + Error Handling
+- [x] 25. Edge Case Fixes + Error Handling
 
   **What to do**:
   - SSE reconnection with exponential backoff + `Last-Event-ID`
@@ -903,7 +903,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `fix: edge cases, error handling, and reconnection logic`
 
-- [ ] 26. Demo Choreography + Backup Recording
+- [x] 26. Demo Choreography + Backup Recording
 
   **What to do**:
   - Write demo script following Architecture §13 Demo Choreography

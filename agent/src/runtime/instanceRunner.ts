@@ -1,4 +1,4 @@
-import OpenAI from 'openai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { AgentSkillConfig, AgentStep, InstanceConfig } from '../types/index.js'
 import { loadSkillConfig } from './configLoader.js'
 
@@ -8,7 +8,7 @@ type ProofCallback = (steps: AgentStep[]) => void
 export class InstanceRunner {
   private config!: AgentSkillConfig
   private instanceConfig: InstanceConfig
-  private openai: OpenAI
+  private genAI: GoogleGenerativeAI
   private running = false
   private stepBuffer: AgentStep[] = []
   private onStep: StepCallback
@@ -21,7 +21,7 @@ export class InstanceRunner {
     this.instanceConfig = instanceConfig
     this.onStep = onStep
     this.onProof = onProof
-    this.openai = new OpenAI({ apiKey: instanceConfig.openaiApiKey })
+    this.genAI = new GoogleGenerativeAI(instanceConfig.geminiApiKey)
   }
 
   async start() {
@@ -59,17 +59,13 @@ export class InstanceRunner {
 
     try {
       const prompt = this.buildPrompt(template, mockData)
-      const response = await this.openai.chat.completions.create({
+      const model = this.genAI.getGenerativeModel({
         model: this.config.model,
-        temperature: this.config.temperature,
-        max_tokens: 200,
-        messages: [
-          { role: 'system', content: this.config.systemPrompt },
-          { role: 'user', content: prompt },
-        ],
+        generationConfig: { temperature: this.config.temperature, maxOutputTokens: 200 },
+        systemInstruction: this.config.systemPrompt,
       })
-
-      const analysis = response.choices[0]?.message?.content || 'Analysis complete.'
+      const result = await model.generateContent(prompt)
+      const analysis = result.response.text() || 'Analysis complete.'
       this.emitStep('finding', 'Analysis result', analysis)
     } catch (e: any) {
       this.emitStep('finding', 'Analysis result', `Mock analysis: ${mockData.summary}`)

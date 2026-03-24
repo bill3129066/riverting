@@ -29,7 +29,7 @@ export default function NewAgentPage() {
       const skillConfig = {
         name: form.name,
         systemPrompt: form.systemPrompt || `You are ${form.name}. ${form.description}. Analyze DeFi data and provide clear insights.`,
-        model: 'gpt-4.1-mini',
+        model: 'gemini-2.0-flash',
         temperature: 0.3,
         tools: [{ type: 'onchainos-market', description: 'Fetch market data' }],
         analysisTemplates: [form.analysisTemplate],

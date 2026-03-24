@@ -7,7 +7,7 @@ export interface AgentSkillConfig {
   category: string;
   curatorRatePerSecond: bigint;
   systemPrompt: string;
-  model: "gpt-4.1-mini" | "gpt-4.1";
+  model: "gemini-2.0-flash" | "gemini-2.5-pro-exp-03-25";
   temperature: number;
   tools: ToolConfig[];
   allowedChains: string[];

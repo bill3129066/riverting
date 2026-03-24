@@ -11,7 +11,7 @@
 - [ ] **1. 取得 X Layer 測試網 OKB**
 - [ ] **2. 部署合約到 X Layer 測試網**
 - [ ] **3. 更新合約地址到設定檔**
-- [ ] **4. 設定 OpenAI API Key（讓 Agent 產出真實分析）**
+- [ ] **4. 設定 Gemini API Key（讓 Agent 產出真實分析）**
 - [ ] **5. 完整跑一次 Demo 確認流程**
 - [ ] **6. 錄製 Demo 影片**
 
@@ -134,24 +134,25 @@ export const ADDRESSES = {
 
 ---
 
-### 4. 設定 OpenAI API Key
+### 4. 設定 Gemini API Key
 
-Agent 需要 OpenAI API 來產出真實的 DeFi 分析。沒有 Key 的話會用 mock 數據（也能 demo，但不夠有說服力）。
+Agent 需要 Google Gemini API 來產出真實的 DeFi 分析。沒有 Key 的話會用 mock 數據（也能 demo，但不夠有說服力）。
 
 ```bash
 # 在 backend/.env 中加入
-echo 'OPENAI_API_KEY=sk-你的OpenAI金鑰' >> backend/.env
+echo 'GEMINI_API_KEY=你的Gemini金鑰' >> backend/.env
 ```
 
 **取得 API Key：**
-1. 前往 [platform.openai.com](https://platform.openai.com)
-2. API Keys → Create new secret key
-3. 選 `gpt-4.1-mini`（便宜又快，適合 demo）
+1. 前往 [Google AI Studio](https://aistudio.google.com/apikey)
+2. 點「Create API Key」
+3. 選一個 Google Cloud 專案（或建立新的）
+4. 複製產生的 API Key
 
 **預算估算：**
 - Demo 跑 3 分鐘 ≈ 30 次 LLM 呼叫
-- `gpt-4.1-mini` 每次 ≈ $0.001
-- 總計 ≈ $0.03（幾乎免費）
+- `gemini-2.0-flash` 免費額度：每分鐘 15 次請求
+- **Google AI Studio 免費方案完全夠用**（不需要付費）
 
 ---
 
