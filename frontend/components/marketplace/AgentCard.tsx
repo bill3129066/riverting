@@ -15,8 +15,15 @@ export default function AgentCard({ agent, onClick }: { agent: Agent; onClick: (
 
   return (
     <div 
-      className="group grid grid-cols-1 md:grid-cols-3 gap-12 items-start py-8 border-t border-border-subtle hover:border-text-primary transition-colors cursor-pointer"
+      role="button"
+      tabIndex={0}
+      className="group grid grid-cols-1 md:grid-cols-3 gap-12 items-start py-8 w-full border-t border-border-subtle hover:border-text-primary transition-colors text-left cursor-pointer"
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          onClick();
+        }
+      }}
     >
       <div className="md:col-span-1 flex flex-col items-start">
         <span className="bg-surface-dim px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-text-tertiary mb-6">
@@ -47,12 +54,14 @@ export default function AgentCard({ agent, onClick }: { agent: Agent; onClick: (
               <div className="text-[10px] uppercase tracking-widest text-accent mb-1 font-bold">Total</div>
               <div className="font-sans text-lg text-accent font-bold">{formatRate(totalRate)}</div>
             </div>
-            <button 
-              className="bg-text-primary text-surface px-6 py-3 text-xs uppercase tracking-widest font-bold group-hover:bg-accent transition-colors"
-            >
-              Deploy Agent &rarr;
-            </button>
           </div>
+          <button 
+            type="button"
+            className="bg-text-primary text-surface px-6 py-3 text-xs uppercase tracking-widest font-bold group-hover:bg-accent transition-colors"
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+          >
+            Start Session &rarr;
+          </button>
         </div>
       </div>
     </div>

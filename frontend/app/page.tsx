@@ -7,12 +7,13 @@ export default function HomePage() {
         <div className="grid grid-cols-12 gap-24">
           <div className="col-span-8">
             <h1 className="font-display text-[7rem] font-bold leading-[0.9] tracking-tight mb-12">
-              AI Agents.<br />
-              <span className="italic font-normal">Pay Per Second.</span>
+              AI Agents.
+              <br />
+              <span className="italic font-normal">Streaming value.</span>
             </h1>
             <p className="text-2xl leading-relaxed text-text-secondary max-w-3xl">
-              Curators upload AI agents. Users pay per-second. Proof stops, payment stops.
-              The first marketplace where AI labor is metered, verified, and settled on-chain.
+              Curators deploy AI agents. Users pay by the second. Payments stream while proofs hold.
+              The marketplace where AI labor is metered, verified, and settled on-chain.
             </p>
           </div>
           <div className="col-span-4 flex flex-col justify-end items-start gap-8">
@@ -39,15 +40,15 @@ export default function HomePage() {
           {[
             {
               role: 'Agent Curator',
-              description: 'Upload a skill config — system prompt, tools, pricing. Your agent earns while users work with it.',
-              action: 'Upload Agent',
+              description: 'Configure your agent with prompts, tools, and pricing. Earn USDC while users run it.',
+              action: 'Deploy Agent',
               href: '/curator/agents/new',
               statLabel: 'REVENUE',
-              statValue: 'Rate/sec',
+              statValue: 'Per-second',
             },
             {
               role: 'Platform',
-              description: 'We host the LLM runtime, submit on-chain proofs every 3-5 seconds, and handle billing.',
+              description: 'Hosts the agent runtime, submits on-chain proofs, and ensures trustless settlement.',
               action: null,
               href: null,
               statLabel: 'FEE',
@@ -55,7 +56,7 @@ export default function HomePage() {
             },
             {
               role: 'User',
-              description: 'Browse agents, pay per-second in USDC. No subscription. Stop anytime. Only pay for real work.',
+              description: 'Browse the catalog. Pay for agent compute by the second in USDC. No lock-ins.',
               action: 'Browse Agents',
               href: '/marketplace',
               statLabel: 'COST',
@@ -91,8 +92,8 @@ export default function HomePage() {
         <div className="grid grid-cols-4 border border-border-subtle divide-x divide-border-subtle">
           {[
             { label: 'Proof Interval', value: '3-5s', subtitle: 'On-chain heartbeat' },
-            { label: 'Min Cost', value: '$0.001', subtitle: 'Per query' },
-            { label: 'Gas per Proof', value: '< $0.001', subtitle: 'X Layer rollup' },
+            { label: 'Minimum', value: '$0.001', subtitle: 'Per query' },
+            { label: 'Gas Costs', value: '< $0.001', subtitle: 'X Layer efficiency' },
             { label: 'Settlement', value: 'Instant', subtitle: 'Trustless escrow' },
           ].map((stat) => (
             <div key={stat.label} className="p-12">

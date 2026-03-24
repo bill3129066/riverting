@@ -224,16 +224,16 @@ export default function SessionPage() {
       {status === 'stopped' && (
         <div className="mt-16 border border-border-subtle bg-surface-elevated">
           <div className="border-b border-border-subtle p-6 bg-surface-dim">
-            <h3 className="font-display font-bold text-2xl text-text-primary">Session Settlement</h3>
+            <h3 className="font-display font-bold text-2xl text-text-primary">Final Settlement</h3>
           </div>
           <div className="grid grid-cols-3 divide-x divide-border-subtle text-center">
             <div className="p-12">
               <div className="text-4xl font-display font-bold text-accent mb-2">${(accrued / 1_000_000).toFixed(4)}</div>
-              <div className="text-text-secondary uppercase tracking-widest text-xs">Total Cost</div>
+              <div className="text-text-secondary uppercase tracking-widest text-xs">Total Charged</div>
             </div>
             <div className="p-12">
               <div className="text-4xl font-display font-bold text-text-primary mb-2">${(accrued * 1000 / 1300 / 1_000_000).toFixed(4)}</div>
-              <div className="text-text-secondary uppercase tracking-widest text-xs">Curator Earned</div>
+              <div className="text-text-secondary uppercase tracking-widest text-xs">Curator Payout</div>
             </div>
             <div className="p-12">
               <div className="text-4xl font-display font-bold text-text-primary mb-2">${(accrued * 300 / 1300 / 1_000_000).toFixed(4)}</div>

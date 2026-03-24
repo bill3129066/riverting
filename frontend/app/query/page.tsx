@@ -12,6 +12,7 @@ const QUERY_TYPES = [
 
 export default function QueryPage() {
   const [agents, setAgents] = useState<any[]>([])
+  const [loadingAgents, setLoadingAgents] = useState(true)
   const [selectedAgent, setSelectedAgent] = useState<number>(1)
   const [queryType, setQueryType] = useState('summary')
   const [question, setQuestion] = useState('')
@@ -20,7 +21,7 @@ export default function QueryPage() {
   const [paymentInfo, setPaymentInfo] = useState<any>(null)
 
   useEffect(() => {
-    fetchAgents().then(setAgents).catch(console.error)
+    fetchAgents().then(setAgents).catch(console.error).finally(() => setLoadingAgents(false))
   }, [])
 
   const handleQuery = async () => {
@@ -77,20 +78,24 @@ export default function QueryPage() {
     <div className="max-w-[1920px] mx-auto px-24 pt-24 pb-32">
       <div className="max-w-3xl mx-auto">
         <h1 className="font-display font-bold text-[5rem] leading-none mb-6">Spot Query</h1>
-        <p className="font-display italic text-2xl text-text-secondary mb-16">Pay per query via x402. No subscription needed.</p>
+        <p className="font-display italic text-2xl text-text-secondary mb-16">Single-request agents. Pay per query. No subscriptions.</p>
 
         <div className="border border-border-subtle bg-surface-elevated p-8 mb-12">
           <label htmlFor="agent-select" className="block text-xs uppercase tracking-widest text-text-secondary mb-4">Select Agent</label>
-          <select
-            id="agent-select"
-            value={selectedAgent}
-            onChange={e => setSelectedAgent(parseInt(e.target.value))}
-            className="w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary outline-none focus:border-accent font-sans"
-          >
-            {agents.map(a => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
+          {loadingAgents ? (
+            <div className="animate-pulse h-12 bg-surface-dim w-full border border-border-subtle" />
+          ) : (
+            <select
+              id="agent-select"
+              value={selectedAgent}
+              onChange={e => setSelectedAgent(parseInt(e.target.value))}
+              className="w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary outline-none focus:border-accent font-sans cursor-pointer"
+            >
+              {agents.map(a => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="mb-12">
@@ -222,8 +227,8 @@ export default function QueryPage() {
 
         {state === 'error' && (
           <div className="bg-error/5 border border-error/20 p-6 mt-8 flex justify-between items-center">
-            <span className="text-error font-bold text-sm uppercase tracking-widest">Query failed. Please try again.</span>
-            <button type="button" onClick={() => setState('idle')} className="text-error underline text-sm uppercase tracking-widest font-bold hover:opacity-80">Reset</button>
+            <span className="text-error font-bold text-sm uppercase tracking-widest">Couldn't complete the query — try again in a moment.</span>
+            <button type="button" onClick={() => setState('idle')} className="text-error underline text-sm uppercase tracking-widest font-bold hover:opacity-80">Try again</button>
           </div>
         )}
       </div>

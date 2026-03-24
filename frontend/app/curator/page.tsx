@@ -9,7 +9,6 @@ export default function CuratorPage() {
   const { address } = useAccount()
   const [agents, setAgents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [removing, setRemoving] = useState<number | null>(null)
 
   useEffect(() => {
     fetchAgents()
@@ -20,26 +19,7 @@ export default function CuratorPage() {
       .finally(() => setLoading(false))
   }, [address])
 
-  async function handleRemove(agentId: number) {
-    if (!address || !confirm('Remove this agent? This cannot be undone.')) return
-    setRemoving(agentId)
-    try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-      const res = await fetch(`${apiBase}/api/agents/${agentId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ curatorWallet: address }),
-      })
-      if (!res.ok) throw new Error('Failed to remove agent')
-      setAgents(prev => prev.filter(a => a.id !== agentId))
-    } catch (e: any) {
-      alert(e.message)
-    } finally {
-      setRemoving(null)
-    }
-  }
-
-  const totalEarned = 0
+  const totalEarned = 0 // Will be populated from settlement service
 
   return (
     <div className="bg-background min-h-screen text-text-primary">
@@ -54,7 +34,7 @@ export default function CuratorPage() {
                 {address ? `${address.slice(0,6)}...${address.slice(-4)}` : 'Connect wallet to see your agents'}
               </span>
               {address && (
-                <button
+                <button 
                   type="button"
                   onClick={() => navigator.clipboard.writeText(address)}
                   className="text-text-tertiary hover:text-text-primary transition-colors"
@@ -74,6 +54,7 @@ export default function CuratorPage() {
           </Link>
         </div>
 
+        {/* Earnings summary */}
         <div className="grid grid-cols-3 gap-0 border border-border-subtle mb-32">
           <div className="p-12 bg-surface border-r border-border-subtle">
             <p className="text-text-secondary text-xs uppercase tracking-widest mb-4">Total Earned</p>
@@ -95,28 +76,34 @@ export default function CuratorPage() {
           </div>
         </div>
 
+        {/* Agent list */}
         <div className="grid grid-cols-12 gap-24">
           <div className="col-span-3">
             <h2 className="font-display text-2xl border-b border-border-strong pb-4 mb-4">My Agents</h2>
             <p className="text-text-secondary text-sm leading-relaxed">
-              Manage your published agents. You earn the curator rate for every second users interact with your agents.
+              Manage your published agents. You earn the curator rate for every second users engage with them.
             </p>
           </div>
           <div className="col-span-9">
             {loading ? (
-              <div className="animate-pulse space-y-6">
-                <div className="h-20 bg-surface-dim" />
-                <div className="h-20 bg-surface-dim" />
+              <div className="space-y-8 border-t border-border-subtle">
+                {[1, 2].map((i) => (
+                  <div key={i} className="animate-pulse border-b border-border-subtle py-8 flex flex-col px-8">
+                    <div className="h-8 bg-surface-dim w-1/3 mb-2" />
+                    <div className="h-4 bg-surface-dim w-1/4 mb-4" />
+                    <div className="h-4 bg-surface-dim w-1/2" />
+                  </div>
+                ))}
               </div>
             ) : agents.length === 0 ? (
               <div className="bg-surface-dim p-24 flex flex-col items-center justify-center text-center">
                 <span className="material-symbols-outlined text-4xl text-text-tertiary mb-6">smart_toy</span>
-                <h3 className="font-display text-3xl mb-4">No agents published yet</h3>
+                <h3 className="font-display text-3xl mb-4">No agents active</h3>
                 <p className="text-text-secondary mb-8 max-w-md">
-                  Publish an AI agent to the network and start earning USDC for every second it runs.
+                  Deploy an AI agent to the network and earn USDC per second of usage.
                 </p>
                 <Link href="/curator/agents/new" className="font-display italic text-accent hover:text-accent-muted text-lg transition-colors">
-                  Upload your first agent →
+                  Deploy your agent &rarr;
                 </Link>
               </div>
             ) : (
@@ -137,18 +124,10 @@ export default function CuratorPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-end gap-4">
                       <span className={`text-xs uppercase tracking-widest px-3 py-1 border ${agent.active ? 'border-accent text-accent' : 'border-border-strong text-text-secondary'}`}>
                         {agent.active ? 'Active' : 'Inactive'}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(agent.id)}
-                        disabled={removing === agent.id}
-                        className="text-xs uppercase tracking-widest px-3 py-1 border border-error/50 text-error hover:bg-error/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {removing === agent.id ? 'Removing...' : 'Remove'}
-                      </button>
                     </div>
                   </div>
                 ))}
