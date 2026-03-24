@@ -120,6 +120,27 @@ export default function SessionPage() {
             <ProofHeartbeatTimeline proofs={proofs} />
           </div>
         </div>
+
+        {/* Settlement breakdown — shows when session ends */}
+        {status === 'stopped' && (
+          <div className="mt-6 bg-[#111] border border-[#00d4aa]/30 rounded-xl p-6">
+            <h3 className="font-bold text-lg mb-4 text-[#00d4aa]">Session Settlement</h3>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold">${(accrued / 1_000_000).toFixed(4)}</div>
+                <div className="text-[#666] text-sm">Total Cost</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-400">${(accrued * 1000 / 1300 / 1_000_000).toFixed(4)}</div>
+                <div className="text-[#666] text-sm">Curator Earned</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-400">${(accrued * 300 / 1300 / 1_000_000).toFixed(4)}</div>
+                <div className="text-[#666] text-sm">Platform Fee</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
