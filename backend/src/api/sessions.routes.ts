@@ -55,3 +55,40 @@ sessionsRoutes.get('/:id/steps', (c) => {
     .all(c.req.param('id'))
   return c.json(steps)
 })
+
+sessionsRoutes.get('/:id/stream', (c) => {
+  const sessionId = c.req.param('id')
+  const lastEventId = parseInt(c.req.header('Last-Event-ID') || '0')
+
+  const stream = new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder()
+
+      controller.enqueue(
+        encoder.encode(
+          `event: connected\ndata: ${JSON.stringify({ sessionId })}\n\n`,
+        ),
+      )
+
+      const sub = sseHub.subscribe(sessionId, controller, lastEventId)
+
+      c.req.raw.signal?.addEventListener('abort', () => {
+        sseHub.unsubscribe(sessionId, sub)
+        try {
+          controller.close()
+        } catch {
+          // controller may already be closed
+        }
+      })
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    },
+  })
+})
