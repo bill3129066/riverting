@@ -8,4 +8,7 @@ export const config = {
   escrowAddress: process.env.ESCROW_CONTRACT_ADDRESS || '',
   usdcAddress: process.env.USDC_ADDRESS || '',
   platformOperatorKey: process.env.PLATFORM_OPERATOR_KEY || '',
+  okxApiKey: process.env.OKX_API_KEY || '',
+  okxSecretKey: process.env.OKX_SECRET_KEY || '',
+  okxPassphrase: process.env.OKX_PASSPHRASE || '',
 }

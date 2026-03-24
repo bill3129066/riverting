@@ -88,6 +88,14 @@ agentsRoutes.delete('/:id', async (c) => {
   return c.json({ success: true, message: 'Agent deactivated' });
 });
 
+agentsRoutes.get('/:id/market-data', async (c) => {
+  const { getTokenPrices } = await import('../services/data/marketAdapter.js')
+  const { getCurrentBlock } = await import('../services/data/rpcAdapter.js')
+  const prices = await getTokenPrices(['ETH-USDC', 'OKB-USDC'])
+  const block = await getCurrentBlock()
+  return c.json({ prices, block, timestamp: new Date().toISOString() })
+})
+
 agentsRoutes.get('/:id/stats', (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json({ error: 'Invalid agent ID' }, 400);
