@@ -7,21 +7,21 @@ interface ProofEvent {
 
 export default function ProofHeartbeatTimeline({ proofs }: { proofs: ProofEvent[] }) {
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-4 h-full">
-      <p className="text-[#666] text-xs uppercase tracking-wide mb-3">
+    <div className="border border-border-subtle p-8 bg-surface-elevated h-full">
+      <p className="text-text-tertiary text-xs uppercase tracking-widest mb-6">
         Proof Heartbeats ({proofs.length})
       </p>
-      <div className="space-y-2 max-h-96 overflow-y-auto">
+      <div className="space-y-4 max-h-[32rem] overflow-y-auto pr-2">
         {proofs.length === 0 ? (
-          <p className="text-[#444] text-sm">Waiting for proofs...</p>
+          <p className="text-text-tertiary text-sm italic">Awaiting proofs...</p>
         ) : (
           [...proofs].reverse().map((proof) => (
-            <div key={`${proof.seq}-${proof.proofHash}`} className="flex items-start gap-2 text-xs">
-              <div className="w-2 h-2 rounded-full bg-[#00d4aa] mt-1 flex-shrink-0" />
+            <div key={`${proof.seq}-${proof.proofHash}`} className="flex items-start gap-3 text-xs">
+              <div className="w-2 h-2 bg-accent mt-1 flex-shrink-0" />
               <div>
-                <div className="text-[#00d4aa] font-mono">#{proof.seq} ✓ Anchored</div>
-                <div className="text-[#444] font-mono truncate">{proof.proofHash.slice(0, 16)}...</div>
-                <div className="text-[#333]">{new Date(proof.ts).toLocaleTimeString()}</div>
+                <div className="text-accent font-mono font-bold uppercase tracking-widest">#{proof.seq} ✓ Anchored</div>
+                <div className="text-text-secondary font-mono truncate mt-1">{proof.proofHash.slice(0, 16)}...</div>
+                <div className="text-text-tertiary mt-1">{new Date(proof.ts).toLocaleTimeString()}</div>
               </div>
             </div>
           ))

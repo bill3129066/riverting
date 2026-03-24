@@ -74,18 +74,18 @@ export default function QueryPage() {
   const selectedAgentData = agents.find(a => a.id === selectedAgent)
 
   return (
-    <div className="p-8">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2">Spot Query</h1>
-        <p className="text-[#666] mb-8">Pay per query via x402. No subscription needed.</p>
+    <div className="max-w-[1920px] mx-auto px-24 pt-24 pb-32">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="font-display font-bold text-[5rem] leading-none mb-6">Spot Query</h1>
+        <p className="font-display italic text-2xl text-text-secondary mb-16">Pay per query via x402. No subscription needed.</p>
 
-        <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5 mb-4">
-          <label htmlFor="agent-select" className="block text-sm text-[#888] mb-2">Select Agent</label>
+        <div className="border border-border-subtle bg-surface-elevated p-8 mb-12">
+          <label htmlFor="agent-select" className="block text-xs uppercase tracking-widest text-text-secondary mb-4">Select Agent</label>
           <select
             id="agent-select"
             value={selectedAgent}
             onChange={e => setSelectedAgent(parseInt(e.target.value))}
-            className="w-full bg-[#0a0a0a] border border-[#222] rounded-lg px-3 py-2 text-white outline-none focus:border-[#00d4aa]"
+            className="w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary outline-none focus:border-accent font-sans"
           >
             {agents.map(a => (
               <option key={a.id} value={a.id}>{a.name}</option>
@@ -93,32 +93,39 @@ export default function QueryPage() {
           </select>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          {QUERY_TYPES.map(qt => (
-            <button
-              key={qt.id}
-              type="button"
-              onClick={() => { setQueryType(qt.id); setState('idle'); setResult(null) }}
-              className={`p-4 rounded-xl border text-left transition-all ${
-                queryType === qt.id
-                  ? 'border-[#00d4aa] bg-[#00d4aa]/5'
-                  : 'border-[#1a1a1a] bg-[#111] hover:border-[#333]'
-              }`}
-            >
-              <div className="font-semibold text-sm">{qt.label}</div>
-              <div className="text-[#00d4aa] font-bold mt-1">{qt.price}</div>
-              <div className="text-[#555] text-xs mt-1">{qt.description}</div>
-            </button>
-          ))}
+        <div className="mb-12">
+          <h2 className="text-xs uppercase tracking-widest text-text-secondary mb-4">Query Type</h2>
+          <div className="flex flex-col border border-border-subtle bg-surface-elevated divide-y divide-border-subtle">
+            {QUERY_TYPES.map(qt => (
+              <button
+                key={qt.id}
+                type="button"
+                onClick={() => { setQueryType(qt.id); setState('idle'); setResult(null) }}
+                className={`p-6 text-left transition-all ${
+                  queryType === qt.id
+                    ? 'border-l-4 border-l-accent bg-accent/5'
+                    : 'border-l-4 border-l-transparent hover:bg-surface-dim'
+                }`}
+              >
+                <div className="flex justify-between items-baseline mb-2">
+                  <div className="font-display font-bold text-2xl text-text-primary">{qt.label}</div>
+                  <div className="text-accent font-mono font-bold">{qt.price}</div>
+                </div>
+                <div className="text-text-secondary">{qt.description}</div>
+              </button>
+            ))}
+          </div>
         </div>
 
         {queryType === 'ask' && (
-          <div className="mb-4">
+          <div className="mb-12">
+            <label htmlFor="question-input" className="block text-xs uppercase tracking-widest text-text-secondary mb-4">Question</label>
             <input
+              id="question-input"
               value={question}
               onChange={e => setQuestion(e.target.value)}
               placeholder="Ask the agent a question..."
-              className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 text-white placeholder-[#444] focus:border-[#00d4aa] outline-none"
+              className="w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none font-sans"
             />
           </div>
         )}
@@ -127,36 +134,36 @@ export default function QueryPage() {
           <button
             type="button"
             onClick={handleQuery}
-            className="w-full bg-[#00d4aa] text-black font-bold py-3.5 rounded-xl hover:bg-[#00b894] transition-colors"
+            className="w-full bg-black text-white font-bold py-4 uppercase tracking-widest hover:bg-text-secondary transition-colors"
           >
             Query for {selectedQueryType.price} →
           </button>
         )}
 
         {state === 'requires-payment' && paymentInfo && (
-          <div className="bg-[#111] border border-[#00d4aa]/30 rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-3 h-3 rounded-full bg-yellow-400" />
-              <span className="font-semibold">Payment Required</span>
+          <div className="border border-accent p-8 bg-surface-elevated mt-8">
+            <div className="flex items-center gap-3 mb-8 border-b border-border-subtle pb-4">
+              <div className="w-3 h-3 bg-warning" />
+              <span className="font-bold uppercase tracking-widest text-sm text-text-primary">Payment Required</span>
             </div>
-            <div className="space-y-2 text-sm mb-5">
-              <div className="flex justify-between">
-                <span className="text-[#666]">Amount</span>
-                <span className="font-bold text-[#00d4aa]">{selectedQueryType.price} USDC</span>
+            <div className="space-y-4 text-sm mb-8">
+              <div className="flex justify-between py-2 border-b border-border-subtle">
+                <span className="text-text-secondary">Amount</span>
+                <span className="font-mono font-bold text-accent">{selectedQueryType.price} USDC</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#666]">Network</span>
-                <span>X Layer</span>
+              <div className="flex justify-between py-2 border-b border-border-subtle">
+                <span className="text-text-secondary">Network</span>
+                <span className="font-mono text-text-primary">X Layer</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#666]">Protocol</span>
-                <span>x402</span>
+              <div className="flex justify-between py-2">
+                <span className="text-text-secondary">Protocol</span>
+                <span className="font-mono text-text-primary">x402</span>
               </div>
             </div>
             <button
               type="button"
               onClick={handlePay}
-              className="w-full bg-[#00d4aa] text-black font-bold py-3 rounded-xl hover:bg-[#00b894] transition-colors"
+              className="w-full bg-black text-white font-bold py-4 uppercase tracking-widest hover:bg-text-secondary transition-colors"
             >
               Pay {selectedQueryType.price} USDC →
             </button>
@@ -164,40 +171,41 @@ export default function QueryPage() {
         )}
 
         {state === 'paying' && (
-          <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-6 text-center">
-            <div className="w-8 h-8 border-2 border-[#00d4aa] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-[#888]">Processing payment on X Layer...</p>
+          <div className="border border-border-subtle p-12 bg-surface-elevated text-center mt-8">
+            <div className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+            <p className="text-text-secondary uppercase tracking-widest text-sm">Processing payment on X Layer...</p>
           </div>
         )}
 
         {state === 'paid' && result && (
-          <div className="bg-[#111] border border-[#00d4aa]/30 rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-3 h-3 rounded-full bg-[#00d4aa]" />
-              <span className="font-semibold text-[#00d4aa]">Payment Confirmed — Analysis Unlocked</span>
+          <div className="border border-accent/30 bg-surface-elevated p-8 mt-8">
+            <div className="flex items-center gap-3 mb-8 border-b border-border-subtle pb-4">
+              <div className="w-3 h-3 bg-accent" />
+              <span className="font-bold uppercase tracking-widest text-sm text-accent">Payment Confirmed — Analysis Unlocked</span>
             </div>
             
             {result.summary && (
-              <p className="text-[#ccc] mb-4">{result.summary}</p>
+              <p className="text-text-primary text-lg leading-relaxed mb-6 font-display">{result.summary}</p>
             )}
             {result.answer && (
-              <div>
-                <p className="text-[#666] text-xs mb-1">Question: {result.question}</p>
-                <p className="text-[#ccc]">{result.answer}</p>
+              <div className="mb-6">
+                <p className="text-text-secondary text-xs uppercase tracking-widest mb-2">Question: {result.question}</p>
+                <p className="text-text-primary text-lg leading-relaxed font-display">{result.answer}</p>
               </div>
             )}
             {result.proofs && (
-              <div>
-                <p className="text-[#666] text-sm mb-2">{result.proofCount} proof records found</p>
+              <div className="mb-6 bg-surface-dim p-6 border border-border-subtle">
+                <p className="text-text-secondary text-xs uppercase tracking-widest mb-4">{result.proofCount} proof records found</p>
                 {result.proofs.slice(0, 3).map((p: any) => (
-                  <div key={p.seq || p.proofHash || Math.random()} className="text-xs font-mono text-[#555] mb-1">
-                    #{p.seq} {p.proofHash?.slice(0, 20)}...
+                  <div key={p.seq || p.proofHash || Math.random()} className="text-sm font-mono text-text-tertiary mb-2 pb-2 border-b border-border-subtle last:border-0 last:pb-0 last:mb-0">
+                    <span className="text-text-secondary font-bold mr-4">#{p.seq}</span>
+                    {p.proofHash?.slice(0, 32)}...
                   </div>
                 ))}
               </div>
             )}
             
-            <div className="mt-4 pt-4 border-t border-[#1a1a1a] flex justify-between text-xs text-[#555]">
+            <div className="mt-8 pt-6 border-t border-border-strong flex justify-between text-xs font-mono text-text-tertiary">
               <span>Paid: {result.pricePaid}</span>
               <span>{new Date(result.timestamp).toLocaleTimeString()}</span>
             </div>
@@ -205,7 +213,7 @@ export default function QueryPage() {
             <button
               type="button"
               onClick={() => { setState('idle'); setResult(null); setPaymentInfo(null) }}
-              className="mt-4 w-full border border-[#222] text-[#666] py-2 rounded-xl hover:border-[#333] transition-colors text-sm"
+              className="mt-8 w-full border border-border-strong text-text-primary font-bold uppercase tracking-widest py-4 hover:bg-surface-dim transition-colors text-sm"
             >
               Query Again
             </button>
@@ -213,9 +221,9 @@ export default function QueryPage() {
         )}
 
         {state === 'error' && (
-          <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">
-            Query failed. Please try again.
-            <button type="button" onClick={() => setState('idle')} className="ml-3 underline">Reset</button>
+          <div className="bg-error/5 border border-error/20 p-6 mt-8 flex justify-between items-center">
+            <span className="text-error font-bold text-sm uppercase tracking-widest">Query failed. Please try again.</span>
+            <button type="button" onClick={() => setState('idle')} className="text-error underline text-sm uppercase tracking-widest font-bold hover:opacity-80">Reset</button>
           </div>
         )}
       </div>

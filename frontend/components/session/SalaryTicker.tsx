@@ -7,19 +7,19 @@ export default function SalaryTicker({ accrued, ratePerSec, status }: {
 }) {
 
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5">
-      <p className="text-[#666] text-xs uppercase tracking-wide mb-2">Total Earned</p>
-      <div className={`text-4xl font-mono font-bold transition-colors ${
-        status === 'active' ? 'text-[#00d4aa]' : 'text-[#444]'
+    <div className="border border-border-subtle p-8 bg-surface-elevated">
+      <p className="text-text-tertiary text-xs uppercase tracking-widest mb-4">Total Earned</p>
+      <div className={`text-6xl font-display font-bold transition-colors ${
+        status === 'active' ? 'text-accent' : 'text-text-tertiary'
       }`}>
         {formatUSDC(accrued)}
       </div>
-      <div className="flex items-center gap-2 mt-3">
-        <div className={`w-2 h-2 rounded-full ${
-          status === 'active' ? 'bg-[#00d4aa] animate-pulse' : 'bg-[#444]'
+      <div className="flex items-center gap-3 mt-6">
+        <div className={`w-2 h-2 ${
+          status === 'active' ? 'bg-accent' : 'bg-text-tertiary'
         }`} />
-        <span className="text-xs text-[#666]">
-          {status === 'active' ? `${formatUSDC(ratePerSec)}/sec` : status.toUpperCase()}
+        <span className="text-xs uppercase tracking-widest text-text-secondary">
+          {status === 'active' ? `${formatUSDC(ratePerSec)}/sec` : status}
         </span>
       </div>
     </div>

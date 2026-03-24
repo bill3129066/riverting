@@ -6,28 +6,28 @@ interface AgentStep {
 }
 
 const KIND_COLORS: Record<string, string> = {
-  api: 'text-blue-400',
-  rpc: 'text-purple-400',
-  metric: 'text-yellow-400',
-  commentary: 'text-[#888]',
-  finding: 'text-[#00d4aa]',
+  api: 'text-blue-600',
+  rpc: 'text-purple-600',
+  metric: 'text-yellow-600',
+  commentary: 'text-text-secondary',
+  finding: 'text-accent',
 }
 
 export default function AgentWorkTimeline({ steps }: { steps: AgentStep[] }) {
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-4 h-full">
-      <p className="text-[#666] text-xs uppercase tracking-wide mb-3">Agent Work</p>
-      <div className="space-y-3 max-h-96 overflow-y-auto">
+    <div className="border border-border-subtle p-8 bg-surface-elevated h-full">
+      <p className="text-text-tertiary text-xs uppercase tracking-widest mb-6">Agent Work</p>
+      <div className="space-y-6 max-h-[32rem] overflow-y-auto pr-4">
         {steps.length === 0 ? (
-          <p className="text-[#444] text-sm">Waiting for agent output...</p>
+          <p className="text-text-tertiary text-sm italic">Waiting for agent output...</p>
         ) : (
           [...steps].reverse().map((step) => (
-            <div key={`${step.ts}-${step.title}`} className="border-l-2 border-[#1a1a1a] pl-3">
-              <div className={`text-xs font-semibold ${KIND_COLORS[step.kind] || 'text-[#888]'}`}>
-                [{step.kind.toUpperCase()}] {step.title}
+            <div key={`${step.ts}-${step.title}`} className="border-l border-border-strong pl-6 py-1">
+              <div className={`text-xs font-bold uppercase tracking-widest ${KIND_COLORS[step.kind] || 'text-text-secondary'}`}>
+                [{step.kind}] {step.title}
               </div>
-              <div className="text-sm text-[#aaa] mt-0.5">{step.body}</div>
-              <div className="text-xs text-[#333] mt-0.5">{new Date(step.ts).toLocaleTimeString()}</div>
+              <div className="text-base text-text-primary mt-2">{step.body}</div>
+              <div className="text-xs font-mono text-text-tertiary mt-2">{new Date(step.ts).toLocaleTimeString()}</div>
             </div>
           ))
         )}
