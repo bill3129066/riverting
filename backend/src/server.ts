@@ -3,6 +3,7 @@ import { serve } from '@hono/node-server';
 import { agentsRoutes } from './api/agents.routes.js';
 import { sessionsRoutes } from './api/sessions.routes.js';
 import { curatorRoutes } from './api/curator.routes.js';
+import { queriesRoutes } from './api/queries.routes.js';
 import { initDb } from './db/init.js';
 import { SessionOrchestrator } from './services/orchestrator/sessionOrchestrator.js';
 import { EventWatcher } from './services/onchain/eventWatcher.js';
@@ -25,6 +26,7 @@ app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOStri
 app.route('/api/agents', agentsRoutes);
 app.route('/api/sessions', sessionsRoutes);
 app.route('/api/curator', curatorRoutes);
+app.route('/api/queries', queriesRoutes);
 
 const port = parseInt(process.env.PORT || '3001');
 serve({ fetch: app.fetch, port }, async () => {
