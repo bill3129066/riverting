@@ -4,6 +4,32 @@
 
 Curators upload AI agents. Users pay per-second. Proof stops, payment stops.
 
+## Quick Start
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start backend
+cd backend && bun run src/db/init.ts && bun run src/server.ts
+
+# Start frontend (new terminal)
+cd frontend && bun run dev
+```
+
+Open http://localhost:3000
+
+## Demo
+
+See [docs/DEMO.md](docs/DEMO.md) for the full 3-minute demo script.
+
+## Contract Tests
+
+```bash
+cd contracts && forge test --fuzz-runs 1000
+# 24/24 tests pass, 1000 fuzz runs
+```
+
 ## Three Parties
 
 | Role | What | Revenue |
