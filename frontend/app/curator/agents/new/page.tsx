@@ -137,6 +137,10 @@ export default function NewAgentPage() {
               placeholder="https://github.com/your-org/your-agent"
               className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 text-white placeholder-[#444] focus:border-[#00d4aa] outline-none font-mono text-sm"
             />
+            <p className="text-xs text-[#555] mt-1.5">
+              Repo root 需包含 <code className="text-[#00d4aa] font-mono">skill.json</code>，
+              格式：<code className="text-[#444] font-mono">{"{"}"systemPrompt","model","temperature","analysisTemplates"{"}"}</code>
+            </p>
           </div>
 
           {error && <p className="text-red-400 text-sm">{error}</p>}

@@ -33,7 +33,13 @@ export default function SessionPage() {
   const [proofs, setProofs] = useState<ProofEvent[]>([])
   const [accrued, setAccrued] = useState(0)
   const [ratePerSec] = useState(1300)
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const saved = localStorage.getItem(`chat_${id}`)
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const chatBottomRef = useRef<HTMLDivElement>(null)
@@ -86,6 +92,9 @@ export default function SessionPage() {
   }, [id, isValidSession])
 
   useEffect(() => {
+    if (isValidSession && chatHistory.length > 0) {
+      localStorage.setItem(`chat_${id}`, JSON.stringify(chatHistory))
+    }
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatHistory])
 
