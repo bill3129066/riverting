@@ -2,6 +2,10 @@
   "name": "riverting-monorepo",
   "private": true,
   "workspaces": [
-    "shared/*"
+    "shared",
+    "contracts",
+    "backend",
+    "agent",
+    "frontend"
   ]
 }

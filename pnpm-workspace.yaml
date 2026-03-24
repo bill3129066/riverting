@@ -1,2 +1,6 @@
 packages:
-  - 'shared/*'
+  - 'shared'
+  - 'contracts'
+  - 'backend'
+  - 'agent'
+  - 'frontend'

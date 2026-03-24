@@ -1,0 +1,3 @@
+- Implemented `nextAgentId` starting at `0` to align with explicit required test (`0,1,2...`) and expected event assertions in this task.
+- Used custom error `NotAgentCurator()` for `updateAgent` and `deactivateAgent` unauthorized access to keep gas-efficient and explicit revert checks.
+- Kept constructor minimal (no zero-address guards) because task scope only specified state initialization and registry behavior.

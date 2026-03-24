@@ -166,7 +166,7 @@ Wave FINAL (Verification — after all tasks):
 
 ## TODOs
 
-- [ ] 1. Monorepo + Shared Config
+- [x] 1. Monorepo + Shared Config
 
   **What to do**:
   - Initialize pnpm workspace with 4 packages: `contracts/`, `backend/`, `agent/`, `frontend/`, plus `shared/`
@@ -228,7 +228,7 @@ Wave FINAL (Verification — after all tasks):
   - Message: `chore: initialize monorepo with pnpm workspaces and shared config`
   - Files: `pnpm-workspace.yaml`, `shared/**`, `.env.example`
 
-- [ ] 2. RivertingEscrow Contract — Agent Registry
+- [x] 2. RivertingEscrow Contract — Agent Registry
 
   **What to do**:
   - Initialize Foundry project in `contracts/`
