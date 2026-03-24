@@ -799,7 +799,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(frontend): implement spot query page with x402 paywall`
 
-- [ ] 21. End-to-End Integration
+- [x] 21. End-to-End Integration
 
   **What to do**:
   - Test full three-party flow on X Layer testnet:

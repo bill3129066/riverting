@@ -14,9 +14,9 @@ contract DeployScript is Script {
         vm.startBroadcast();
         RivertingEscrow escrow = new RivertingEscrow(
             platformWallet,
+            platformOperator,
             platformFeeRate,
-            paymentToken,
-            platformOperator
+            paymentToken
         );
         vm.stopBroadcast();
 
