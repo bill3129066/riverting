@@ -8,14 +8,15 @@ export default function CuratorLayout({ children }: { children: React.ReactNode 
 
   if (!isConnected) {
     return (
-      <div className="flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-background">
         <div className="text-center max-w-md">
-          <div className="text-5xl mb-6">🔒</div>
-          <h1 className="text-2xl font-bold mb-2">Wallet Required</h1>
-          <p className="text-[#666] mb-8">
+          <h1 className="text-4xl font-display font-bold mb-4 text-text-primary">Wallet Required</h1>
+          <p className="text-text-secondary mb-8">
             Connect your wallet to access the Curator Dashboard.
           </p>
-          <ConnectButton />
+          <div className="flex justify-center">
+            <ConnectButton />
+          </div>
         </div>
       </div>
     )
