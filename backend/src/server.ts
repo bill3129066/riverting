@@ -1,19 +1,27 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { agentsRoutes } from './api/agents.routes.js';
+import { sessionsRoutes } from './api/sessions.routes.js';
 import { initDb } from './db/init.js';
+import { SessionOrchestrator } from './services/orchestrator/sessionOrchestrator.js';
+import { EventWatcher } from './services/onchain/eventWatcher.js';
 
 const app = new Hono();
 
 initDb();
 
+export const orchestrator = new SessionOrchestrator();
+const eventWatcher = new EventWatcher(orchestrator);
+
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 app.route('/api/agents', agentsRoutes);
+app.route('/api/sessions', sessionsRoutes);
 
 const port = parseInt(process.env.PORT || '3001');
 serve({ fetch: app.fetch, port }, () => {
   console.log(`Backend running on http://localhost:${port}`);
+  eventWatcher.start();
 });
 
 export default app;
