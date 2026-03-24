@@ -6,46 +6,31 @@ import { ConnectWalletButton } from './wallet/ConnectWalletButton'
 export function NavBar() {
   const pathname = usePathname()
 
+  const navLink = (href: string, label: string, isActive: boolean) => (
+    <Link
+      href={href}
+      className={`text-xs uppercase tracking-widest transition-colors ${
+        isActive
+          ? 'border-b-2 border-text-primary text-text-primary'
+          : 'text-text-tertiary hover:text-text-primary'
+      }`}
+    >
+      {label}
+    </Link>
+  )
+
   return (
-    <nav className="border-b border-[#222] bg-[#0a0a0a] px-8 py-4">
-      <div className="mx-auto flex max-w-7xl items-center justify-between">
+    <nav className="sticky top-0 z-50 bg-surface-dim">
+      <div className="mx-auto flex max-w-[1920px] items-center justify-between px-24 py-8">
         <div className="flex items-center gap-12">
-          <Link href="/" className="text-xl font-extrabold text-[#00d4aa] tracking-tight">
+          <Link href="/" className="font-display text-3xl font-bold tracking-tighter text-text-primary">
             Riverting
           </Link>
           <div className="flex gap-8">
-            <Link 
-              href="/marketplace" 
-              className={`text-sm font-medium transition-colors ${
-                pathname === '/marketplace' ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
-              }`}
-            >
-              Browse Agents
-            </Link>
-            <Link
-              href="/sessions"
-              className={`text-sm font-medium transition-colors ${
-                pathname?.startsWith('/sessions') ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
-              }`}
-            >
-              My Sessions
-            </Link>
-            <Link
-              href="/curator"
-              className={`text-sm font-medium transition-colors ${
-                pathname?.startsWith('/curator') ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
-              }`}
-            >
-              Upload Agent
-            </Link>
-            <Link
-              href="/settings"
-              className={`text-sm font-medium transition-colors ${
-                pathname?.startsWith('/settings') ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
-              }`}
-            >
-              Settings
-            </Link>
+            {navLink('/marketplace', 'Browse Agents', pathname === '/marketplace')}
+            {navLink('/sessions', 'My Sessions', pathname?.startsWith('/sessions') ?? false)}
+            {navLink('/curator', 'Upload Agent', pathname?.startsWith('/curator') ?? false)}
+            {navLink('/settings', 'Settings', pathname?.startsWith('/settings') ?? false)}
           </div>
         </div>
         <ConnectWalletButton />

@@ -2,91 +2,107 @@ import Link from 'next/link'
 
 export default function HomePage() {
   return (
-    <div>
-      {/* Hero */}
-      <div className="max-w-5xl mx-auto px-8 pt-24 pb-16 text-center">
-        <div className="inline-block bg-[#00d4aa]/10 border border-[#00d4aa]/20 text-[#00d4aa] text-xs px-3 py-1 rounded-full mb-6 uppercase tracking-widest">
-          X Layer OnchainOS Hackathon
+    <div className="min-h-screen bg-background text-text-primary">
+      <section className="mx-auto max-w-[1920px] px-24 py-48">
+        <div className="grid grid-cols-12 gap-24">
+          <div className="col-span-8">
+            <h1 className="font-display text-[7rem] font-bold leading-[0.9] tracking-tight mb-12">
+              AI Agents.<br />
+              <span className="italic font-normal">Pay Per Second.</span>
+            </h1>
+            <p className="text-2xl leading-relaxed text-text-secondary max-w-3xl">
+              Curators upload AI agents. Users pay per-second. Proof stops, payment stops.
+              The first marketplace where AI labor is metered, verified, and settled on-chain.
+            </p>
+          </div>
+          <div className="col-span-4 flex flex-col justify-end items-start gap-8">
+            <Link 
+              href="/marketplace"
+              className="group flex items-center gap-4 border-b border-text-primary pb-2 text-xl font-medium transition-colors hover:text-accent hover:border-accent"
+            >
+              Browse Agents
+              <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
+            </Link>
+            <Link 
+              href="/curator"
+              className="group flex items-center gap-4 border-b border-text-tertiary pb-2 text-xl font-medium text-text-secondary transition-colors hover:text-text-primary hover:border-text-primary"
+            >
+              Upload Agent
+              <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
+            </Link>
+          </div>
         </div>
-        <h1 className="text-6xl font-bold mb-6 leading-tight">
-          AI Agents.<br />
-          <span className="text-[#00d4aa]">Pay Per Second.</span>
-        </h1>
-        <p className="text-xl text-[#888] mb-10 max-w-2xl mx-auto">
-          Curators upload AI agents. Users pay per-second. Proof stops, payment stops.
-          The first marketplace where AI labor is metered, verified, and settled on-chain.
-        </p>
-        <div className="flex gap-4 justify-center">
-          <Link href="/marketplace"
-            className="bg-[#00d4aa] text-black font-bold px-8 py-4 rounded-xl hover:bg-[#00b894] transition-colors text-lg">
-            Browse Agents →
-          </Link>
-          <Link href="/curator"
-            className="border border-[#222] text-white px-8 py-4 rounded-xl hover:border-[#00d4aa] transition-colors text-lg">
-            Upload Agent
-          </Link>
-        </div>
-      </div>
+      </section>
 
-      {/* Three-party explanation */}
-      <div className="max-w-5xl mx-auto px-8 pb-16">
-        <div className="grid grid-cols-3 gap-6">
+      <section className="mx-auto max-w-[1920px] px-24 pb-48">
+        <div className="grid grid-cols-12 gap-24">
           {[
             {
               role: 'Agent Curator',
-              icon: '🧠',
               description: 'Upload a skill config — system prompt, tools, pricing. Your agent earns while users work with it.',
-              action: 'Upload Agent →',
+              action: 'Upload Agent',
               href: '/curator/agents/new',
-              color: 'border-purple-500/30',
+              statLabel: 'REVENUE',
+              statValue: 'Rate/sec',
             },
             {
               role: 'Platform',
-              icon: '⚡',
               description: 'We host the LLM runtime, submit on-chain proofs every 3-5 seconds, and handle billing.',
               action: null,
               href: null,
-              color: 'border-[#00d4aa]/30',
+              statLabel: 'FEE',
+              statValue: '0%',
             },
             {
               role: 'User',
-              icon: '💰',
               description: 'Browse agents, pay per-second in USDC. No subscription. Stop anytime. Only pay for real work.',
-              action: 'Browse Agents →',
+              action: 'Browse Agents',
               href: '/marketplace',
-              color: 'border-blue-500/30',
+              statLabel: 'COST',
+              statValue: 'Pay-as-you-go',
             },
           ].map(card => (
-            <div key={card.role} className={`bg-[#111] border ${card.color} rounded-2xl p-6`}>
-              <div className="text-3xl mb-3">{card.icon}</div>
-              <h3 className="font-bold text-lg mb-2">{card.role}</h3>
-              <p className="text-[#666] text-sm mb-4">{card.description}</p>
-              {card.action && card.href && (
-                <Link href={card.href} className="text-[#00d4aa] text-sm hover:underline">
-                  {card.action}
-                </Link>
-              )}
+            <div key={card.role} className="col-span-4 flex flex-col">
+              <h3 className="font-display text-4xl font-bold italic mb-8">{card.role}</h3>
+              <div className="h-px w-12 bg-text-primary mb-8"></div>
+              <div className="flex-grow flex flex-col">
+                <p className="text-text-secondary mb-8">{card.description}</p>
+                {card.action && card.href ? (
+                  <div className="mb-12">
+                    <Link href={card.href} className="group inline-flex items-center gap-2 border-b border-text-tertiary pb-1 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary hover:border-text-primary">
+                      {card.action}
+                      <span className="material-symbols-outlined text-[1rem] transition-transform group-hover:translate-x-1">arrow_forward</span>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="mb-12"></div>
+                )}
+              </div>
+              <div className="bg-surface-dim p-8">
+                <div className="text-xs uppercase tracking-widest text-text-secondary mb-4">{card.statLabel}</div>
+                <div className="font-display text-4xl font-bold text-accent">{card.statValue}</div>
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Stats bar */}
-      <div className="border-t border-[#111] py-8">
-        <div className="max-w-5xl mx-auto px-8 grid grid-cols-4 gap-8 text-center">
+      <section className="mx-auto max-w-[1920px] px-24 pb-48">
+        <div className="grid grid-cols-4 border border-border-subtle divide-x divide-border-subtle">
           {[
-            { label: 'Proof Interval', value: '3-5s' },
-            { label: 'Min Cost', value: '$0.001/query' },
-            { label: 'Gas per Proof', value: '< $0.001' },
-            { label: 'Settlement', value: 'On-chain' },
-          ].map(stat => (
-            <div key={stat.label}>
-              <div className="text-2xl font-bold text-[#00d4aa]">{stat.value}</div>
-              <div className="text-[#555] text-sm mt-1">{stat.label}</div>
+            { label: 'Proof Interval', value: '3-5s', subtitle: 'On-chain heartbeat' },
+            { label: 'Min Cost', value: '$0.001', subtitle: 'Per query' },
+            { label: 'Gas per Proof', value: '< $0.001', subtitle: 'X Layer rollup' },
+            { label: 'Settlement', value: 'Instant', subtitle: 'Trustless escrow' },
+          ].map((stat) => (
+            <div key={stat.label} className="p-12">
+              <div className="text-xs uppercase tracking-widest text-text-tertiary mb-6">{stat.label}</div>
+              <div className="font-display text-5xl font-bold text-text-primary mb-4">{stat.value}</div>
+              <div className="text-accent font-medium text-sm">{stat.subtitle}</div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
     </div>
   )
 }
