@@ -234,7 +234,7 @@ class RealAgentRunner {
     if (this.genAI && this.skillConfig) {
       try {
         const model = this.genAI.getGenerativeModel({
-          model: this.skillConfig.model || 'gemini-2.0-flash',
+          model: (this.skillConfig.model && this.skillConfig.model.startsWith('gemini')) ? this.skillConfig.model : 'gemini-2.0-flash',
           generationConfig: {
             temperature: this.skillConfig.temperature ?? 0.3,
             maxOutputTokens: 200,

@@ -113,7 +113,7 @@ sessionsRoutes.post('/:id/chat', async (c) => {
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
-      model: skillConfig.model || 'gemini-2.0-flash',
+      model: (skillConfig.model && skillConfig.model.startsWith('gemini')) ? skillConfig.model : 'gemini-2.0-flash',
       generationConfig: { temperature: skillConfig.temperature ?? 0.7, maxOutputTokens: 512 },
       systemInstruction: systemPrompt,
     })
