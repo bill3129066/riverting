@@ -1,0 +1,18 @@
+{
+  "sessionId": "ba8b3b74-66f9-4046-9276-fc3af410a2b3",
+  "seq": 1,
+  "intervalStart": "2026-03-24 16:51:42",
+  "intervalEnd": "2026-03-24T16:51:43.330Z",
+  "onchainOSCalls": [
+    {
+      "api": "rpc",
+      "endpoint": "X Layer RPC",
+      "resultHash": "06fbf7545533216c98c7c5508cbfce2476aa1a3c1a9e9d1a2d988c2d9bce3434"
+    }
+  ],
+  "computedMetrics": {
+    "Metrics computed": "Pool A: 4.6% APY | Pool B: 6.4% APY"
+  },
+  "outputChunkHash": "2fcef28b448aec4aee7d9ee8d27ed3ac278acaec73f20d27d0979240dce3192c",
+  "stepCount": 2
+}

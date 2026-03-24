@@ -1,3 +1,4 @@
 - After deleting default Counter contract/test, `script/Counter.s.sol` still imported `src/Counter.sol` and broke compilation; removed script to restore green build.
 - Foundry emits a non-blocking warning about unknown `rpc_endpoints` location in config, but commands exit 0.
 - Solidity LSP is not configured in this environment, so diagnostics verification for `.sol` files was performed via `forge test` compile + runtime checks instead of `lsp_diagnostics`.
+- `openai@^4.67.0` resolved to a newer compatible `4.104.0` during install; runtime API used remains `chat.completions.create` and worked under Bun.

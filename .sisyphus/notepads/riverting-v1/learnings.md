@@ -15,3 +15,8 @@
 - Add `"types": ["bun-types"]` to tsconfig.json for `bun:sqlite` type resolution.
 - SQLite WAL files (`*.db-shm`, `*.db-wal`) need explicit gitignore patterns — `*.db` alone doesn't catch them.
 - Implemented live session page with Server-Sent Events (SSE) streaming state (agent output, proofs, metrics). Used `crypto.randomUUID()` or unique composite keys for realtime lists.
+- Agent runtime can safely treat `skill_config_json` as `string | object`; normalizing at the loader boundary keeps runtime logic clean.
+- Keeping proof packaging on a fixed interval (`setInterval`) independent from `runAnalysisCycle` guarantees heartbeat emission even when LLM calls are slow/failing.
+- Mock-first analysis cycles (API/RPC/metric/finding steps) make the session pipeline testable before real OnchainOS integration tasks.
+
+- When implementing spot query with x402, use a multi-state UI ('idle', 'requires-payment', 'paying', 'paid') and ensure that all interactive elements are correctly typed and handle accessibility (labels, type='button').

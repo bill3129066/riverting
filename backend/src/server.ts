@@ -27,6 +27,7 @@ app.route('/api/agents', agentsRoutes);
 app.route('/api/sessions', sessionsRoutes);
 app.route('/api/curator', curatorRoutes);
 app.route('/api/queries', queriesRoutes);
+app.route('/queries', queriesRoutes); // x402 canonical path
 
 const port = parseInt(process.env.PORT || '3001');
 serve({ fetch: app.fetch, port }, async () => {

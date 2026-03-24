@@ -615,7 +615,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(frontend): implement live session page with salary ticker and proof timeline`
 
-- [ ] 12. Agent Unified LLM Runtime + Config Loader
+- [x] 12. Agent Unified LLM Runtime + Config Loader
 
   **What to do**:
   - Create `agent/src/runtime/configLoader.ts` — load AgentSkillConfig from registry API
@@ -639,7 +639,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(agent): implement unified LLM runtime with config loader`
 
-- [ ] 13. OnchainOS API Client with HMAC Auth
+- [x] 13. OnchainOS API Client with HMAC Auth
 
   **What to do**:
   - Create `backend/src/services/data/onchainosClient.ts` — authenticated HTTP client
@@ -660,7 +660,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(backend): implement OnchainOS API client with HMAC auth`
 
-- [ ] 14. Agent Pool-Snapshot Analysis Template
+- [x] 14. Agent Pool-Snapshot Analysis Template
 
   **What to do**:
   - Create `agent/src/prompts/poolSnapshot.ts` — system prompt for pool analysis
@@ -679,7 +679,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(agent): implement pool-snapshot analysis template`
 
-- [ ] 15. Backend Instance Manager
+- [x] 15. Backend Instance Manager
 
   **What to do**:
   - Create `services/instance/instanceManager.ts`:
@@ -720,7 +720,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(agent): implement proof package builder and hasher`
 
-- [ ] 17. Frontend Curator Dashboard
+- [x] 17. Frontend Curator Dashboard
 
   **What to do**:
   - Implement `/curator` page — list curator's agents + earnings summary
@@ -742,7 +742,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(frontend): implement curator dashboard with agent upload and earnings`
 
-- [ ] 18. Backend Settlement Service
+- [x] 18. Backend Settlement Service
 
   **What to do**:
   - Create `services/settlement/settlementService.ts`:
@@ -764,7 +764,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(backend): implement settlement service with curator earnings tracking`
 
-- [ ] 19. x402 Middleware + Paid Query Endpoint
+- [x] 19. x402 Middleware + Paid Query Endpoint
 
   **What to do**:
   - Install `@x402/hono` middleware
@@ -782,7 +782,7 @@ Wave FINAL (Verification — after all tasks):
 
   **Commit**: `feat(backend): implement x402 middleware with paid query endpoint`
 
-- [ ] 20. Frontend Spot Query Page
+- [x] 20. Frontend Spot Query Page
 
   **What to do**:
   - Implement `/query` page with `X402PaywallCard` + `PaidResponseViewer`

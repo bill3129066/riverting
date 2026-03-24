@@ -1,0 +1,10 @@
+{
+  "sessionId": "3394e2e1-5793-47d7-9e2f-2d26b0e8307f",
+  "seq": 1,
+  "intervalStart": "2026-03-24T16:27:55.328Z",
+  "intervalEnd": "2026-03-24T16:27:55.328Z",
+  "onchainOSCalls": [],
+  "computedMetrics": {},
+  "outputChunkHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stepCount": 0
+}

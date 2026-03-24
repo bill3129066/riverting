@@ -3,3 +3,6 @@
 - Kept constructor minimal (no zero-address guards) because task scope only specified state initialization and registry behavior.
 - Added constructor arg `platformOperator` and separate role checks (`NotPlatformWallet`, `NotPlatformOperator`) to preserve explicit authority boundaries between proof submission and earnings claim.
 - Kept proof config constants (`proofWindow=10`, `minProofInterval=3`) internal defaults for deterministic tests and architecture demo-mode alignment.
+- Created a standalone `agent/` Bun package with OpenAI SDK and strict TypeScript config to isolate runtime concerns from backend services.
+- Implemented `InstanceRunner` with separate work loop (8s) and proof heartbeat loop (4s) to satisfy liveness-decoupling requirement from Metis findings.
+- Used OpenAI chat completion with graceful fallback to mock findings so local/dev sessions still emit meaningful step streams without valid API credentials.
