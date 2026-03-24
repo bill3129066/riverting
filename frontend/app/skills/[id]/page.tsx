@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { useAccount } from 'wagmi'
-import { fetchSkill, runSkill, fetchSkillExecutions } from '@/lib/skills-api'
+import { useRouter } from 'next/navigation'
+import { fetchSkill, runSkill, fetchSkillExecutions, deleteSkill } from '@/lib/skills-api'
 
 interface Skill {
   id: string
@@ -31,6 +32,7 @@ interface InputField {
 
 interface Execution {
   id: string
+  user_wallet: string
   status: string
   output_text: string | null
   duration_ms: number | null
@@ -63,6 +65,7 @@ function formatPrice(microUnits: number): string {
 export default function SkillDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { address } = useAccount()
+  const router = useRouter()
   const [skill, setSkill] = useState<Skill | null>(null)
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [output, setOutput] = useState<string | null>(null)
@@ -71,11 +74,28 @@ export default function SkillDetailPage() {
   const [execStats, setExecStats] = useState<{ durationMs: number; tokensUsed: number | null } | null>(null)
   const [executions, setExecutions] = useState<Execution[]>([])
   const [loading, setLoading] = useState(true)
+  const [execTab, setExecTab] = useState<'all' | 'mine'>('all')
 
   useEffect(() => {
     fetchSkill(id).then(setSkill).catch(console.error).finally(() => setLoading(false))
     fetchSkillExecutions(id).then(setExecutions).catch(() => {})
   }, [id])
+
+  const isOwner = skill && address && skill.creator_wallet.toLowerCase() === address.toLowerCase()
+
+  const handleDelete = async () => {
+    if (!address || !confirm('Are you sure you want to delete this skill?')) return
+    try {
+      await deleteSkill(id, address)
+      router.push('/skills')
+    } catch (e: any) {
+      alert(e.message)
+    }
+  }
+
+  const filteredExecutions = execTab === 'mine' && address
+    ? executions.filter(e => e.user_wallet.toLowerCase() === address.toLowerCase())
+    : executions
 
   const inputFields = skill ? parseInputSchema(skill.input_schema_json) : []
 
@@ -125,9 +145,17 @@ export default function SkillDetailPage() {
           </div>
           <h1 className="text-3xl font-bold mb-1">{skill.name}</h1>
           <p className="text-[#888]">{skill.description}</p>
-          <p className="text-xs text-[#555] mt-2">
-            By {skill.creator_wallet.slice(0, 6)}...{skill.creator_wallet.slice(-4)} · {skill.model} · {formatPrice(skill.price_per_run)}/run
-          </p>
+          <div className="flex items-center gap-3 mt-2">
+            <p className="text-xs text-[#555]">
+              By {skill.creator_wallet.slice(0, 6)}...{skill.creator_wallet.slice(-4)} · {skill.model} · {formatPrice(skill.price_per_run)}/run
+            </p>
+            {isOwner && (
+              <button onClick={handleDelete}
+                className="text-xs text-[#666] hover:text-red-400 border border-[#333] hover:border-red-400/50 px-2 py-0.5 rounded transition-colors">
+                Delete Skill
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Main: Input + Output */}
@@ -217,9 +245,27 @@ export default function SkillDetailPage() {
         {/* Recent Executions */}
         {executions.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-lg font-semibold mb-4">Recent Executions</h2>
+            <div className="flex items-center gap-4 mb-4">
+              <h2 className="text-lg font-semibold">Recent Executions</h2>
+              <div className="flex gap-2">
+                <button onClick={() => setExecTab('all')}
+                  className={`text-xs px-2.5 py-1 rounded-full transition-colors ${
+                    execTab === 'all' ? 'bg-[#00d4aa]/10 text-[#00d4aa]' : 'text-[#666] hover:text-white'
+                  }`}>
+                  All ({executions.length})
+                </button>
+                {address && (
+                  <button onClick={() => setExecTab('mine')}
+                    className={`text-xs px-2.5 py-1 rounded-full transition-colors ${
+                      execTab === 'mine' ? 'bg-[#00d4aa]/10 text-[#00d4aa]' : 'text-[#666] hover:text-white'
+                    }`}>
+                    Mine ({executions.filter(e => e.user_wallet.toLowerCase() === address.toLowerCase()).length})
+                  </button>
+                )}
+              </div>
+            </div>
             <div className="space-y-2">
-              {executions.slice(0, 10).map(exec => (
+              {filteredExecutions.slice(0, 10).map(exec => (
                 <div key={exec.id} className="bg-[#111] border border-[#1a1a1a] rounded-lg px-4 py-3 flex items-start gap-4">
                   <span className={`text-xs px-2 py-0.5 rounded-full mt-0.5 ${
                     exec.status === 'completed' ? 'bg-green-500/10 text-green-400' :
@@ -233,6 +279,7 @@ export default function SkillDetailPage() {
                       {exec.output_text || exec.error_message || 'No output'}
                     </p>
                     <div className="flex gap-3 text-xs text-[#555] mt-1">
+                      <span>{exec.user_wallet.slice(0, 6)}...{exec.user_wallet.slice(-4)}</span>
                       <span>{new Date(exec.created_at).toLocaleString()}</span>
                       {exec.duration_ms && <span>{exec.duration_ms}ms</span>}
                       {exec.tokens_used && <span>{exec.tokens_used} tokens</span>}
@@ -240,6 +287,9 @@ export default function SkillDetailPage() {
                   </div>
                 </div>
               ))}
+              {filteredExecutions.length === 0 && (
+                <p className="text-sm text-[#555] py-4 text-center">No executions yet</p>
+              )}
             </div>
           </div>
         )}
