@@ -20,3 +20,4 @@
 - Mock-first analysis cycles (API/RPC/metric/finding steps) make the session pipeline testable before real OnchainOS integration tasks.
 
 - When implementing spot query with x402, use a multi-state UI ('idle', 'requires-payment', 'paying', 'paid') and ensure that all interactive elements are correctly typed and handle accessibility (labels, type='button').
+Frontend UI polished successfully with next/link active states and custom styling. Next.js build passes.
