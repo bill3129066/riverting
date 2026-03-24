@@ -38,6 +38,14 @@ export function NavBar() {
             >
               Upload Agent
             </Link>
+            <Link
+              href="/settings"
+              className={`text-sm font-medium transition-colors ${
+                pathname?.startsWith('/settings') ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
+              }`}
+            >
+              Settings
+            </Link>
           </div>
         </div>
         <ConnectWalletButton />
