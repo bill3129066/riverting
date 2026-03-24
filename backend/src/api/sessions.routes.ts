@@ -3,6 +3,8 @@ import { getDb } from '../db/client.js'
 import { SessionOrchestrator } from '../services/orchestrator/sessionOrchestrator.js'
 import { sseHub } from '../services/realtime/sseHub.js'
 import { ProofRelayer } from '../services/proof/proofRelayer.js'
+import { instanceManager } from '../services/instance/instanceManager.js'
+import { settlementService } from '../services/settlement/settlementService.js'
 
 const orchestrator = new SessionOrchestrator()
 
@@ -43,7 +45,36 @@ sessionsRoutes.post('/:id/spawn', async (c) => {
   const relayer = new ProofRelayer()
   relayer.startProofLoop(sessionId)
 
-  return c.json({ sessionId, status: 'active' }, 201)
+  const instanceId = await instanceManager.spawnInstance(sessionId, body.agentId || 1)
+
+  return c.json({ sessionId, instanceId, status: 'active' }, 201)
+})
+
+sessionsRoutes.post('/:id/pause', (c) => {
+  const sessionId = c.req.param('id')
+  instanceManager.pauseInstance(sessionId)
+  const db = getDb()
+  db.prepare("UPDATE sessions SET status = 'paused' WHERE id = ?").run(sessionId)
+  return c.json({ sessionId, status: 'paused' })
+})
+
+sessionsRoutes.post('/:id/resume', (c) => {
+  const sessionId = c.req.param('id')
+  instanceManager.resumeInstance(sessionId)
+  const db = getDb()
+  db.prepare("UPDATE sessions SET status = 'active' WHERE id = ?").run(sessionId)
+  return c.json({ sessionId, status: 'active' })
+})
+
+sessionsRoutes.post('/:id/stop', (c) => {
+  const sessionId = c.req.param('id')
+  instanceManager.stopInstance(sessionId)
+  const db = getDb()
+  db.prepare("UPDATE sessions SET status = 'stopped', ended_at = datetime('now') WHERE id = ?").run(
+    sessionId,
+  )
+  settlementService.recordSessionEarnings(sessionId)
+  return c.json({ sessionId, status: 'stopped' })
 })
 
 sessionsRoutes.get('/:id/steps', (c) => {
