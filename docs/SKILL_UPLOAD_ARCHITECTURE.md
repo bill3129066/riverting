@@ -541,3 +541,106 @@ Frontend (wagmi)              Backend (viem)
 | `ProofRelayer` | Phase 2 | stream 模式的 skill 才需要 proof |
 | `NavBar` | 新增 Skills 連結 | 主導航入口 |
 | `Marketplace` | 保留 | Agent 維度的瀏覽 |
+
+---
+
+## Skill Prompt 壓縮流程
+
+### 問題
+
+原始 SKILL.md 通常 10-30KB，遠超 system prompt 的有效範圍（~2000 tokens）。
+直接截斷會丟失關鍵規則；全部塞進去會浪費 token 預算。
+
+### 自動壓縮 Pipeline
+
+```
+用戶上傳 SKILL.md (26KB)
+    │
+    ├── autoCompress = true?
+    │   ├── POST /api/skills/compress
+    │   │   └── Gemini 壓縮引擎:
+    │   │       • MUST rules → 保留原文
+    │   │       • SHOULD rules → 壓成一行
+    │   │       • MAY rules → 刪除
+    │   │       • Examples → 刪除
+    │   │       • 長文 → 轉表格/決策樹
+    │   │       • 重複 → 去重
+    │   │   → 輸出 ~4KB 壓縮版
+    │   │
+    │   ├── 每個 pattern 也壓縮:
+    │   │   POST /api/skills/compress?type=pattern
+    │   │   → 保留步驟/公式/判斷標準
+    │   │   → 刪除背景理論/長範例
+    │   │   → 輸出 ~2KB 壓縮版
+    │   │
+    │   └── 前端顯示壓縮率 (e.g. "compressed 73%")
+    │
+    └── autoCompress = false?
+        └── 直接截斷到 8000 chars
+```
+
+### 壓縮規則
+
+| 原始內容 | 壓縮策略 | 範例 |
+|---|---|---|
+| MUST 規則 | 保留原文 | "Always anchor to same block" |
+| SHOULD 規則 | 壓成一行 | "Decode hex before presenting" |
+| MAY 規則 | 刪除 | "Consider using multicall" |
+| 長段落 | 轉表格 | 3 段 → 3 行表格 |
+| 條件邏輯 | 轉決策樹 | if/else → `─┬─ yes → ... └─ no → ...` |
+| 函式選擇器 | 速查格式 | `name=06fdde03 sym=95d89b41` |
+| 範例程式碼 | 刪除，只保留簽名 | 完整函式 → 一行 signature |
+| 重複出現 | 去重，保留最精確版 | 兩處相同規則 → 一處 |
+
+### Runtime Prompt 架構（tool-use 模式）
+
+```
+┌─────────────────────────────────────┐
+│ systemInstruction (~1500 tokens)    │
+│ • Core principle                    │
+│ • Available tools list              │
+│ • Workflow (5 phases, 1 line each)  │
+│ • Critical rules (MUST only)        │
+│ • Common selectors table            │
+│ • Event signatures table            │
+│ • Output format                     │
+└─────────────────────────────────────┘
+         +
+┌─────────────────────────────────────┐
+│ User prompt                         │
+│ • User query (rendered template)    │
+│ • Parameters (chain, address, etc.) │
+│ • Reference context (~3000 chars)   │
+│   └── keyword-matched pattern       │
+└─────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────┐
+│ Gemini multi-turn tool-use loop     │
+│ 1. Gemini reads prompt              │
+│ 2. Calls RPC tool (e.g. eth_call)  │
+│ 3. Backend executes via viem        │
+│ 4. Result sent back to Gemini       │
+│ 5. Gemini calls more tools or       │
+│    generates final text response    │
+│ (max 50 tool calls per execution)   │
+└─────────────────────────────────────┘
+```
+
+### API
+
+```
+POST /api/skills/compress
+Body: { content: string, type: "skill" | "pattern" }
+Response: {
+  original: 26040,
+  compressed: 4012,
+  ratio: "84.6%",
+  content: "compressed prompt text..."
+}
+```
+
+### 前端 UI
+
+上傳頁面有 "Auto-compress prompts" 勾選框（預設開啟）：
+- 開啟：上傳前自動壓縮 SKILL.md + 每個 pattern，顯示壓縮率
+- 關閉：直接截斷到 8000 chars（快但品質低）

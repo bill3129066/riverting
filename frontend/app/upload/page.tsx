@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import { useRouter } from 'next/navigation'
-import { createSkill } from '@/lib/skills-api'
+import { createSkill, compressSkillContent } from '@/lib/skills-api'
 import { signAction } from '@/lib/sign-action'
 
 /**
@@ -60,6 +60,8 @@ export default function UploadSkillPage() {
   const [importPreview, setImportPreview] = useState<{ name: string; description: string; patterns: string[] } | null>(null)
   const [importCategory, setImportCategory] = useState('defi')
   const [importPrice, setImportPrice] = useState('3000')
+  const [autoCompress, setAutoCompress] = useState(true)
+  const [compressStatus, setCompressStatus] = useState('')
 
   const update = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm(prev => ({ ...prev, [field]: e.target.value }))
@@ -162,12 +164,21 @@ export default function UploadSkillPage() {
         inputSchemaJson = JSON.stringify(schema)
       }
 
+      // Auto-compress if system prompt is large
+      let systemPrompt = form.systemPrompt
+      if (autoCompress && systemPrompt.length > 3000) {
+        setCompressStatus('Compressing system prompt...')
+        const result = await compressSkillContent(systemPrompt, 'skill')
+        systemPrompt = result.content
+        setCompressStatus(`Compressed ${result.ratio}`)
+      }
+
       const auth = await signAction(signMessageAsync, address, 'create-skill')
       await createSkill({
         name: form.name,
         description: form.description,
         category: form.category,
-        systemPrompt: form.systemPrompt,
+        systemPrompt,
         userPromptTemplate: form.userPromptTemplate || undefined,
         model: form.model,
         temperature: parseFloat(form.temperature),
@@ -196,8 +207,29 @@ export default function UploadSkillPage() {
 
     setLoading(true)
     setError('')
+    setCompressStatus('')
 
     try {
+      // Auto-compress if enabled
+      let masterPrompt = parsed.systemPrompt
+      const processedPatterns = [...patternFiles]
+
+      if (autoCompress && masterPrompt.length > 3000) {
+        setCompressStatus('Compressing SKILL.md...')
+        const result = await compressSkillContent(masterPrompt, 'skill')
+        masterPrompt = result.content
+        setCompressStatus(`SKILL.md compressed ${result.ratio}`)
+
+        for (let i = 0; i < processedPatterns.length; i++) {
+          if (processedPatterns[i].content.length > 2000) {
+            setCompressStatus(`Compressing ${processedPatterns[i].name}...`)
+            const pr = await compressSkillContent(processedPatterns[i].content, 'pattern')
+            processedPatterns[i] = { ...processedPatterns[i], content: pr.content }
+          }
+        }
+        setCompressStatus('Compression done. Publishing...')
+      }
+
       const auth = await signAction(signMessageAsync, address, 'create-skill')
       let created = 0
 
@@ -206,7 +238,7 @@ export default function UploadSkillPage() {
         name: parsed.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
         description: parsed.description,
         category: importCategory,
-        systemPrompt: parsed.systemPrompt,
+        systemPrompt: masterPrompt,
         userPromptTemplate: 'Analyze: {{query}}\n\nChain: {{chain}}\nTarget address (if any): {{address}}',
         model: 'gemini-2.0-flash',
         temperature: 0.2,
@@ -223,7 +255,7 @@ export default function UploadSkillPage() {
       created++
 
       // Create individual pattern skills
-      for (const pattern of patternFiles) {
+      for (const pattern of processedPatterns) {
         const patternAuth = await signAction(signMessageAsync, address, 'create-skill')
         const patternName = pattern.name
           .replace(/-/g, ' ')
@@ -345,6 +377,18 @@ export default function UploadSkillPage() {
                 </p>
               </div>
             )}
+
+            {/* Auto-compress toggle */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-[#888]">
+                <input type="checkbox" checked={autoCompress} onChange={e => setAutoCompress(e.target.checked)}
+                  className="accent-[#00d4aa]" />
+                Auto-compress prompts (recommended for large skills)
+              </label>
+              {compressStatus && (
+                <span className="text-xs text-[#00d4aa]">{compressStatus}</span>
+              )}
+            </div>
 
             {/* Category + Price */}
             <div className="grid grid-cols-2 gap-4">

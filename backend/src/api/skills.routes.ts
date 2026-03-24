@@ -4,6 +4,7 @@ import {
   rateSkill, getUserRating, getSkillStats,
 } from '../services/skill/skillRegistry.js'
 import { runSkillOnce, runSkillStream, getExecutionsBySkill } from '../services/skill/skillExecutor.js'
+import { compressSkillPrompt, compressPattern } from '../services/skill/skillCompressor.js'
 import { getBalance, deposit } from '../services/skill/billing.js'
 import { requireSignature } from '../middleware/verifySignature.js'
 import { rateLimiter } from '../middleware/rateLimit.js'
@@ -19,6 +20,27 @@ skillsRoutes.get('/', (c) => {
   const q = c.req.query('q')
   const skills = listSkills({ category: category || undefined, creator: creator || undefined, q: q || undefined })
   return c.json(skills)
+})
+
+// Compress skill content (public — used during upload preview)
+skillsRoutes.post('/compress', async (c) => {
+  const body = await c.req.json()
+  const { content, type } = body
+
+  if (!content || typeof content !== 'string') {
+    return c.json({ error: 'content string required' }, 400)
+  }
+
+  const compressed = type === 'pattern'
+    ? await compressPattern(content)
+    : await compressSkillPrompt(content)
+
+  return c.json({
+    original: content.length,
+    compressed: compressed.length,
+    ratio: ((1 - compressed.length / content.length) * 100).toFixed(1) + '%',
+    content: compressed,
+  })
 })
 
 // Popular skills (must be before /:id)

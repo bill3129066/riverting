@@ -51,6 +51,18 @@ export async function fetchSkillStats(id: string) {
   return res.json()
 }
 
+// --- Compression ---
+
+export async function compressSkillContent(content: string, type: 'skill' | 'pattern' = 'skill'): Promise<{ original: number; compressed: number; ratio: string; content: string }> {
+  const res = await fetch(`${API_BASE}/api/skills/compress`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content, type }),
+  })
+  if (!res.ok) throw new Error('Failed to compress')
+  return res.json()
+}
+
 // --- Public read routes (no auth) ---
 
 export async function fetchSkills(params?: { category?: string; q?: string }) {
