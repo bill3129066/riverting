@@ -57,3 +57,4 @@ backend/dev.db
 backend/demo.db
 backend/*.db-shm
 backend/*.db-wal
+.env.demo
