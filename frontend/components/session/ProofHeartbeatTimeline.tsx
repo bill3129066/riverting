@@ -16,7 +16,7 @@ export default function ProofHeartbeatTimeline({ proofs }: { proofs: ProofEvent[
           <p className="text-[#444] text-sm">Waiting for proofs...</p>
         ) : (
           [...proofs].reverse().map((proof) => (
-            <div key={proof.seq} className="flex items-start gap-2 text-xs">
+            <div key={`${proof.seq}-${proof.proofHash}`} className="flex items-start gap-2 text-xs">
               <div className="w-2 h-2 rounded-full bg-[#00d4aa] mt-1 flex-shrink-0" />
               <div>
                 <div className="text-[#00d4aa] font-mono">#{proof.seq} ✓ Anchored</div>

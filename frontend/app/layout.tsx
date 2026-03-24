@@ -1,8 +1,13 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import dynamic from 'next/dynamic'
 import './globals.css'
-import { Providers } from './providers'
 import { NavBar } from '@/components/NavBar'
+
+const Providers = dynamic(
+  () => import('./providers').then(mod => ({ default: mod.Providers })),
+  { ssr: false }
+)
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -18,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} min-h-screen bg-background text-text`}>
+      <body className={`${inter.className} min-h-screen bg-background text-text`} suppressHydrationWarning>
         <Providers>
           <div className="flex flex-col min-h-screen">
             <NavBar />
