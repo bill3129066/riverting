@@ -8,14 +8,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: '#0a0a0a',
-        card: '#111111',
-        border: '#222222',
-        primary: '#00d4aa',
-        text: {
-          DEFAULT: '#ffffff',
-          muted: '#888888',
-        },
+        background: '#11100d',
+        surface: '#181613',
+        'surface-elevated': '#211e1a',
+        'border-subtle': '#2f2a24',
+        'border-strong': '#4a4137',
+        'text-primary': '#f4f1ea',
+        'text-secondary': '#c9c1b4',
+        'text-tertiary': '#9b9285',
+        accent: '#b7862f',
+        'accent-muted': '#3b2f1a',
+        'accent-foreground': '#1a150d',
+        success: '#4f7a4b',
+        warning: '#b96c2b',
+        error: '#b24a3f',
+      },
+      fontFamily: {
+        sans: ['var(--font-body)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'serif'],
       },
     },
   },
