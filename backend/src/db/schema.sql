@@ -68,3 +68,52 @@ CREATE TABLE IF NOT EXISTS query_sales (
   receipt_ref TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS skills (
+  id TEXT PRIMARY KEY,
+  agent_id INTEGER REFERENCES agents(id),
+  creator_wallet TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  category TEXT DEFAULT 'general',
+  system_prompt TEXT NOT NULL,
+  user_prompt_template TEXT,
+  model TEXT DEFAULT 'gemini-2.0-flash',
+  temperature REAL DEFAULT 0.3,
+  max_tokens INTEGER DEFAULT 1024,
+  tools_json TEXT,
+  input_schema_json TEXT,
+  price_per_run INTEGER DEFAULT 0,
+  rate_per_second INTEGER,
+  execution_mode TEXT DEFAULT 'once',
+  active INTEGER DEFAULT 1,
+  run_count INTEGER DEFAULT 0,
+  avg_rating REAL,
+  metadata_uri TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_skills_category ON skills(category);
+CREATE INDEX IF NOT EXISTS idx_skills_creator ON skills(creator_wallet);
+CREATE INDEX IF NOT EXISTS idx_skills_agent ON skills(agent_id);
+
+CREATE TABLE IF NOT EXISTS skill_executions (
+  id TEXT PRIMARY KEY,
+  skill_id TEXT NOT NULL REFERENCES skills(id),
+  user_wallet TEXT NOT NULL,
+  session_id TEXT REFERENCES sessions(id),
+  input_json TEXT,
+  output_text TEXT,
+  output_metadata_json TEXT,
+  status TEXT DEFAULT 'pending',
+  error_message TEXT,
+  duration_ms INTEGER,
+  tokens_used INTEGER,
+  amount_charged INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  completed_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_executions_skill ON skill_executions(skill_id);
+CREATE INDEX IF NOT EXISTS idx_executions_user ON skill_executions(user_wallet);

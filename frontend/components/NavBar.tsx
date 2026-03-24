@@ -14,13 +14,29 @@ export function NavBar() {
             Riverting
           </Link>
           <div className="flex gap-8">
-            <Link 
-              href="/marketplace" 
+            <Link
+              href="/skills"
+              className={`text-sm font-medium transition-colors ${
+                pathname === '/skills' || pathname?.startsWith('/skills/') ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
+              }`}
+            >
+              Skills
+            </Link>
+            <Link
+              href="/upload"
+              className={`text-sm font-medium transition-colors ${
+                pathname === '/upload' ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
+              }`}
+            >
+              Upload
+            </Link>
+            <Link
+              href="/marketplace"
               className={`text-sm font-medium transition-colors ${
                 pathname === '/marketplace' ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
               }`}
             >
-              Browse Agents
+              Agents
             </Link>
             <Link
               href="/sessions"
@@ -28,7 +44,7 @@ export function NavBar() {
                 pathname?.startsWith('/sessions') ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
               }`}
             >
-              My Sessions
+              Sessions
             </Link>
             <Link
               href="/curator"
@@ -36,7 +52,7 @@ export function NavBar() {
                 pathname?.startsWith('/curator') ? 'text-[#00d4aa]' : 'text-[#888] hover:text-white'
               }`}
             >
-              Upload Agent
+              Curator
             </Link>
           </div>
         </div>

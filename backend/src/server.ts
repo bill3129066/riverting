@@ -5,6 +5,7 @@ import { agentsRoutes } from './api/agents.routes.js';
 import { sessionsRoutes } from './api/sessions.routes.js';
 import { curatorRoutes } from './api/curator.routes.js';
 import { queriesRoutes } from './api/queries.routes.js';
+import { skillsRoutes } from './api/skills.routes.js';
 import { initDb } from './db/init.js';
 import { SessionOrchestrator } from './services/orchestrator/sessionOrchestrator.js';
 import { EventWatcher } from './services/onchain/eventWatcher.js';
@@ -35,6 +36,7 @@ app.route('/api/sessions', sessionsRoutes);
 app.route('/api/curator', curatorRoutes);
 app.route('/api/queries', queriesRoutes);
 app.route('/queries', queriesRoutes); // x402 canonical path
+app.route('/api/skills', skillsRoutes);
 
 const port = parseInt(process.env.PORT || '3001');
 serve({ fetch: app.fetch, port }, async () => {
