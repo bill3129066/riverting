@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { useAccount } from 'wagmi'
 import { useRouter } from 'next/navigation'
+import { useSignMessage } from 'wagmi'
 import { fetchSkill, runSkill, fetchSkillExecutions, deleteSkill } from '@/lib/skills-api'
+import { signAction } from '@/lib/sign-action'
 
 interface Skill {
   id: string
@@ -65,6 +67,7 @@ function formatPrice(microUnits: number): string {
 export default function SkillDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { address } = useAccount()
+  const { signMessageAsync } = useSignMessage()
   const router = useRouter()
   const [skill, setSkill] = useState<Skill | null>(null)
   const [inputs, setInputs] = useState<Record<string, string>>({})
@@ -78,15 +81,16 @@ export default function SkillDetailPage() {
 
   useEffect(() => {
     fetchSkill(id).then(setSkill).catch(console.error).finally(() => setLoading(false))
-    fetchSkillExecutions(id).then(setExecutions).catch(() => {})
-  }, [id])
+    fetchSkillExecutions(id, address?.toLowerCase()).then(setExecutions).catch(() => {})
+  }, [id, address])
 
   const isOwner = skill && address && skill.creator_wallet.toLowerCase() === address.toLowerCase()
 
   const handleDelete = async () => {
     if (!address || !confirm('Are you sure you want to delete this skill?')) return
     try {
-      await deleteSkill(id, address)
+      const auth = await signAction(signMessageAsync, address, 'delete-skill', id)
+      await deleteSkill(id, auth)
       router.push('/skills')
     } catch (e: any) {
       alert(e.message)
@@ -107,7 +111,8 @@ export default function SkillDetailPage() {
     setExecStats(null)
 
     try {
-      const result = await runSkill(id, address, inputs)
+      const auth = await signAction(signMessageAsync, address, 'run-skill', id)
+      const result = await runSkill(id, inputs, auth)
       if (result.status === 'failed') {
         setError(result.error || 'Execution failed')
       } else {
@@ -115,7 +120,7 @@ export default function SkillDetailPage() {
         setExecStats({ durationMs: result.durationMs, tokensUsed: result.tokensUsed })
       }
       // Refresh executions
-      fetchSkillExecutions(id).then(setExecutions).catch(() => {})
+      fetchSkillExecutions(id, address.toLowerCase()).then(setExecutions).catch(() => {})
     } catch (e: any) {
       setError(e.message)
     } finally {

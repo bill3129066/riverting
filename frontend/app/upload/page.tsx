@@ -1,11 +1,13 @@
 'use client'
 import { useState } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccount, useSignMessage } from 'wagmi'
 import { useRouter } from 'next/navigation'
 import { createSkill } from '@/lib/skills-api'
+import { signAction } from '@/lib/sign-action'
 
 export default function UploadSkillPage() {
   const { address } = useAccount()
+  const { signMessageAsync } = useSignMessage()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -75,8 +77,9 @@ export default function UploadSkillPage() {
         inputSchemaJson = JSON.stringify(schema)
       }
 
+      const auth = await signAction(signMessageAsync, address, 'create-skill')
+
       await createSkill({
-        creatorWallet: address,
         name: form.name,
         description: form.description,
         category: form.category,
@@ -89,7 +92,7 @@ export default function UploadSkillPage() {
         executionMode: form.executionMode,
         metadataUri: form.metadataUri || undefined,
         inputSchemaJson,
-      })
+      }, auth)
 
       router.push('/skills')
     } catch (e: any) {

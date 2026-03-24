@@ -19,7 +19,7 @@ const app = new Hono();
 app.use('*', cors({
   origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'X-Payment', 'Last-Event-ID'],
+  allowHeaders: ['Content-Type', 'X-Payment', 'Last-Event-ID', 'X-Wallet-Address', 'X-Signature', 'X-Timestamp'],
 }));
 
 initDb();

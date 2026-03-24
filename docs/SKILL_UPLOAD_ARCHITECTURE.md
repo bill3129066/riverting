@@ -405,6 +405,103 @@ NavBar: Home | Skills | Marketplace | Sessions | Curator
 
 ---
 
+## 多使用者隔離設計
+
+### 1. Wallet 簽名驗證（EIP-191 personal_sign）
+
+所有寫入操作（create / update / delete / run）必須攜帶錢包簽名。
+後端驗證簽名後，從簽名中恢復 wallet address，而非信任前端 POST body。
+
+**簽名訊息格式：**
+```
+Riverting Skill Action
+Wallet: 0x...
+Action: run-skill
+Timestamp: 1711324800
+Skill: <skillId>
+```
+
+**驗證流程：**
+```
+Frontend (wagmi)              Backend (viem)
+  │                              │
+  │ useSignMessage()             │
+  │ signMessageAsync({message})  │
+  │──────────────────────────────│
+  │                              │
+  │ Headers:                     │
+  │   X-Wallet-Address           │
+  │   X-Signature                │
+  │   X-Timestamp                │
+  │─────────────────────────────>│
+  │                              │ verifyMessage()
+  │                              │ check timestamp < 5min
+  │                              │ set verifiedWallet
+  │                              │──> route handler
+```
+
+**檔案：**
+- `backend/src/middleware/verifySignature.ts` — Hono middleware
+- `frontend/lib/sign-action.ts` — 簽名工具函式
+
+**受保護的路由：**
+| Route | Action | 說明 |
+|---|---|---|
+| `POST /api/skills` | `create-skill` | 建立 skill |
+| `PUT /api/skills/:id` | `update-skill` | 更新 skill |
+| `DELETE /api/skills/:id` | `delete-skill` | 刪除 skill（比對 creator_wallet）|
+| `POST /api/skills/:id/run` | `run-skill` | 執行 skill |
+
+### 2. Per-Wallet Rate Limiting
+
+防止單一用戶耗盡共用 Gemini API quota。使用 Token Bucket 演算法。
+
+- 預設限制：**10 次 / 60 秒**（per wallet）
+- 僅套用在 `POST /api/skills/:id/run`（Gemini 呼叫路由）
+- 超限回傳 `429 Too Many Requests` + `Retry-After` header
+- 記憶體內 Map，每 60 秒清理過期 bucket
+
+**檔案：** `backend/src/middleware/rateLimit.ts`
+
+### 3. 執行歷史權限控制
+
+`GET /api/skills/:id/executions` 根據請求者身份回傳不同資料：
+
+| 請求者 | 回傳內容 |
+|---|---|
+| **Skill Creator**（`?wallet=` 比對 `creator_wallet`）| 所有 executions 完整資料 |
+| **已認證用戶**（`?wallet=0x...`）| 僅自己的 executions 完整資料 |
+| **未認證** | 所有 executions 的 metadata（`input_json`、`output_text` 為 null）|
+
+### 4. Gemini 並發佇列
+
+所有 Gemini API 呼叫經過 Semaphore 控制並發數量：
+
+- 預設最大並發：**3**（`GEMINI_MAX_CONCURRENT` env var）
+- 超出並發的請求排隊等待，30 秒 timeout 後回傳 503
+- 防止突發流量導致 API key rate limit 或 timeout
+
+**檔案：** `backend/src/services/skill/requestQueue.ts`
+
+### 隔離矩陣
+
+```
+                    ┌─────────────┬─────────────┬─────────────┐
+                    │   User A    │   User B    │  Anonymous  │
+┌───────────────────┼─────────────┼─────────────┼─────────────┤
+│ Create Skill      │  ✅ signed  │  ✅ signed  │  ❌ 401     │
+│ Delete Own Skill  │  ✅ signed  │  ❌ 404     │  ❌ 401     │
+│ Run Any Skill     │  ✅ signed  │  ✅ signed  │  ❌ 401     │
+│ See Own Execs     │  ✅ full    │  ✅ full    │  ❌ no data │
+│ See Others' Execs │  ❌ hidden  │  ❌ hidden  │  ❌ hidden  │
+│ See All (Creator) │  ✅ if owns │  ✅ if owns │  ❌         │
+│ Rate Limit        │  10/min     │  10/min     │  N/A        │
+│ Gemini Queue      │  shared 3   │  shared 3   │  N/A        │
+└───────────────────┴─────────────┴─────────────┴─────────────┘
+```
+
+---
+
 ## 實作優先順序
 
 ### Phase 1: 核心 MVP

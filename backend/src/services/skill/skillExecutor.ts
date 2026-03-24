@@ -2,6 +2,7 @@ import { getDb } from '../../db/client.js'
 import { randomUUID } from 'crypto'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSkillById, incrementRunCount } from './skillRegistry.js'
+import { geminiQueue } from './requestQueue.js'
 import type { SkillRow, SkillExecutionRow } from '../../types/index.js'
 
 interface RunResult {
@@ -83,27 +84,29 @@ export async function runSkillOnce(
         .join('\n')
     }
 
-    // Call Gemini
+    // Call Gemini (queued to limit concurrency)
     const geminiApiKey = process.env.GEMINI_API_KEY
     if (!geminiApiKey) throw new Error('GEMINI_API_KEY not configured')
 
-    const genAI = new GoogleGenerativeAI(geminiApiKey)
-    const model = genAI.getGenerativeModel({
-      model: skill.model || 'gemini-2.0-flash',
-      generationConfig: {
-        temperature: skill.temperature ?? 0.3,
-        maxOutputTokens: skill.max_tokens || 1024,
-      },
-      systemInstruction: skill.system_prompt,
+    const { output, tokensUsed } = await geminiQueue.run(async () => {
+      const genAI = new GoogleGenerativeAI(geminiApiKey)
+      const model = genAI.getGenerativeModel({
+        model: skill.model || 'gemini-2.0-flash',
+        generationConfig: {
+          temperature: skill.temperature ?? 0.3,
+          maxOutputTokens: skill.max_tokens || 1024,
+        },
+        systemInstruction: skill.system_prompt,
+      })
+
+      const result = await model.generateContent(userPrompt)
+      const text = result.response.text()
+      const usage = result.response.usageMetadata
+      const tokens = usage ? (usage.promptTokenCount || 0) + (usage.candidatesTokenCount || 0) : null
+      return { output: text, tokensUsed: tokens }
     })
 
-    const result = await model.generateContent(userPrompt)
-    const output = result.response.text()
     const durationMs = Date.now() - startTime
-
-    // Try to get token count
-    const usage = result.response.usageMetadata
-    const tokensUsed = usage ? (usage.promptTokenCount || 0) + (usage.candidatesTokenCount || 0) : null
 
     // Update execution record
     db.prepare(`
@@ -142,9 +145,38 @@ export async function runSkillOnce(
   }
 }
 
-export function getExecutionsBySkill(skillId: string, limit = 20): SkillExecutionRow[] {
-  return getDb()
-    .prepare('SELECT * FROM skill_executions WHERE skill_id = $skillId ORDER BY created_at DESC LIMIT $limit')
+/**
+ * Get executions with permission filtering:
+ * - Creator sees all executions for their skill
+ * - Authenticated user sees only their own executions
+ * - Unauthenticated sees only metadata (no input/output)
+ */
+export function getExecutionsBySkill(
+  skillId: string,
+  opts: { requestingWallet?: string; isCreator?: boolean; limit?: number } = {},
+): SkillExecutionRow[] {
+  const db = getDb()
+  const limit = opts.limit ?? 20
+
+  if (opts.isCreator) {
+    // Creator sees everything
+    return db
+      .prepare('SELECT * FROM skill_executions WHERE skill_id = $skillId ORDER BY created_at DESC LIMIT $limit')
+      .all({ $skillId: skillId, $limit: limit }) as SkillExecutionRow[]
+  }
+
+  if (opts.requestingWallet) {
+    // Authenticated user sees only their own
+    return db
+      .prepare('SELECT * FROM skill_executions WHERE skill_id = $skillId AND user_wallet = $wallet ORDER BY created_at DESC LIMIT $limit')
+      .all({ $skillId: skillId, $wallet: opts.requestingWallet, $limit: limit }) as SkillExecutionRow[]
+  }
+
+  // Unauthenticated: metadata only (no input/output content)
+  return db
+    .prepare(`SELECT id, skill_id, user_wallet, status, duration_ms, tokens_used, amount_charged, created_at, completed_at,
+      NULL as input_json, NULL as output_text, NULL as output_metadata_json, NULL as error_message
+      FROM skill_executions WHERE skill_id = $skillId ORDER BY created_at DESC LIMIT $limit`)
     .all({ $skillId: skillId, $limit: limit }) as SkillExecutionRow[]
 }
 

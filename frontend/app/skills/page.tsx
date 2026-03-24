@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useAccount } from 'wagmi'
+import { useAccount, useSignMessage } from 'wagmi'
 import { fetchSkills, deleteSkill } from '@/lib/skills-api'
+import { signAction } from '@/lib/sign-action'
 
 interface Skill {
   id: string
@@ -26,6 +27,7 @@ function formatPrice(microUnits: number): string {
 
 export default function SkillsPage() {
   const { address } = useAccount()
+  const { signMessageAsync } = useSignMessage()
   const [skills, setSkills] = useState<Skill[]>([])
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState('all')
@@ -49,7 +51,8 @@ export default function SkillsPage() {
   const handleDelete = async (skillId: string) => {
     if (!address || !confirm('Are you sure you want to delete this skill?')) return
     try {
-      await deleteSkill(skillId, address)
+      const auth = await signAction(signMessageAsync, address, 'delete-skill', skillId)
+      await deleteSkill(skillId, auth)
       loadSkills()
     } catch (e: any) {
       alert(e.message)
