@@ -49,18 +49,19 @@ export default function AgentCard({ agent, onClick }: { agent: Agent; onClick: (
             <div className="text-[10px] uppercase tracking-widest text-text-tertiary mb-1">Platform</div>
             <div className="font-sans text-sm text-text-secondary">{formatRate(PLATFORM_FEE)}</div>
           </div>
-          <div className="flex justify-between items-end">
-            <div>
-              <div className="text-[10px] uppercase tracking-widest text-accent mb-1 font-bold">Total</div>
-              <div className="font-sans text-lg text-accent font-bold">{formatRate(totalRate)}</div>
-            </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-accent mb-1 font-bold">Total</div>
+            <div className="font-sans text-lg text-accent font-bold">{formatRate(totalRate)}</div>
           </div>
+        </div>
+        <div className="flex justify-end mt-6">
           <button 
             type="button"
-            className="bg-text-primary text-surface px-6 py-3 text-xs uppercase tracking-widest font-bold group-hover:bg-accent transition-colors"
+            className="bg-text-primary text-surface px-8 py-3 text-xs uppercase tracking-widest font-bold group-hover:bg-accent transition-colors flex items-center gap-2"
             onClick={(e) => { e.stopPropagation(); onClick(); }}
           >
-            Start Session &rarr;
+            Start Session
+            <span className="material-symbols-outlined text-sm">arrow_forward</span>
           </button>
         </div>
       </div>
