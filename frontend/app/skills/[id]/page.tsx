@@ -68,6 +68,7 @@ export default function SkillDetailPage() {
   const [chatStarted, setChatStarted] = useState(false)
   const [toolActivity, setToolActivity] = useState<string[]>([])
   const [toolCallCount, setToolCallCount] = useState(0)
+  const [demoMode, setDemoMode] = useState(false)
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -154,7 +155,7 @@ export default function SkillDetailPage() {
   // Send message in chat mode
   const sendMessage = async (overrideMessage?: string) => {
     const text = (overrideMessage || chatInput).trim()
-    if (!text || chatLoading || !address) return
+    if (!text || chatLoading) return
     if (!overrideMessage) setChatInput('')
 
     const userMsg: ChatMsg = { role: 'user', text }
@@ -163,7 +164,10 @@ export default function SkillDetailPage() {
     setError('')
 
     try {
-      const auth = await signAction(signMessageAsync, address, 'run-skill', id)
+      // Use signed auth if wallet connected and not in demo mode
+      const auth = (address && !demoMode)
+        ? await signAction(signMessageAsync, address, 'run-skill', id)
+        : undefined
 
       // Build Gemini-format history (exclude the message we're about to send)
       const geminiHistory = chatHistory.map(m => ({
@@ -189,7 +193,6 @@ export default function SkillDetailPage() {
 
   // Start chat with initial inputs
   const handleStartChat = () => {
-    if (!address) { setError('Connect wallet first'); return }
     setChatStarted(true)
 
     // Build initial message from inputs
@@ -273,13 +276,35 @@ export default function SkillDetailPage() {
 
             {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
 
-            <button onClick={handleStartChat} disabled={!address}
-              className="w-full mt-4 bg-[#00d4aa] text-black font-bold py-3 rounded-xl hover:bg-[#00b894] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {!address ? 'Connect Wallet First' : 'Start Conversation'}
+            {/* Mode toggle */}
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setDemoMode(false)}
+                  className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                    !demoMode ? 'bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/30' : 'text-[#666] border-[#333] hover:border-[#555]'
+                  }`}>
+                  Wallet Mode
+                </button>
+                <button
+                  onClick={() => setDemoMode(true)}
+                  className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                    demoMode ? 'bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/30' : 'text-[#666] border-[#333] hover:border-[#555]'
+                  }`}>
+                  Demo Mode
+                </button>
+              </div>
+              {!demoMode && !address && <span className="text-xs text-[#666]">Connect wallet to use</span>}
+            </div>
+
+            <button onClick={handleStartChat}
+              disabled={!demoMode && !address}
+              className="w-full mt-3 bg-[#00d4aa] text-black font-bold py-3 rounded-xl hover:bg-[#00b894] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              {demoMode ? 'Start Conversation (Demo)' : !address ? 'Connect Wallet First' : 'Start Conversation'}
             </button>
 
             {/* Balance info */}
-            {address && (
+            {!demoMode && address && (
               <div className="mt-4 flex items-center justify-between text-xs text-[#555]">
                 <span>
                   Platform balance:
@@ -293,12 +318,24 @@ export default function SkillDetailPage() {
                 </button>
               </div>
             )}
+            {demoMode && (
+              <p className="mt-3 text-xs text-[#555]">Demo mode: no wallet or payment required, free to test.</p>
+            )}
           </div>
         ) : (
           /* ── Chat interface ── */
           <div className="flex flex-col h-[calc(100vh-280px)]">
+            {/* Chat header */}
+            <div className="flex items-center justify-between bg-[#111] border border-b-0 border-[#1a1a1a] rounded-t-xl px-4 py-2">
+              <span className={`text-xs px-2 py-0.5 rounded-full ${demoMode ? 'bg-yellow-500/10 text-yellow-400' : 'bg-[#00d4aa]/10 text-[#00d4aa]'}`}>
+                {demoMode ? 'Demo Mode' : `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+              </span>
+              <button onClick={handleClearChat} className="text-xs text-[#666] hover:text-[#888] transition-colors">
+                New Chat
+              </button>
+            </div>
             {/* Chat messages */}
-            <div className="flex-1 overflow-y-auto bg-[#111] border border-[#1a1a1a] rounded-t-xl p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto bg-[#111] border border-t-0 border-b-0 border-[#1a1a1a] p-4 space-y-4">
               {chatHistory.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${

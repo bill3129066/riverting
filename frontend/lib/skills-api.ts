@@ -174,11 +174,12 @@ export async function chatWithSkill(
   message: string,
   history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
   inputs: Record<string, unknown>,
-  auth: SignedHeaders,
+  auth?: SignedHeaders,
 ): Promise<{ reply: string; tokensUsed: number | null; toolCallCount: number }> {
-  const res = await fetch(`${API_BASE}/api/skills/${id}/chat`, {
+  const endpoint = auth ? `${API_BASE}/api/skills/${id}/chat` : `${API_BASE}/api/skills/${id}/chat-demo`
+  const res = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...auth },
+    headers: { 'Content-Type': 'application/json', ...(auth || {}) },
     body: JSON.stringify({ message, history, inputs }),
   })
   if (!res.ok) {

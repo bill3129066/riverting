@@ -22,11 +22,8 @@ export function rateLimiter(opts: { maxRequests: number; windowMs: number }) {
 
   return async (c: Context, next: Next) => {
     const wallet: string | undefined = c.get('verifiedWallet') || c.req.header('x-wallet-address')
-    if (!wallet) {
-      return c.json({ error: 'Wallet address required for rate limiting' }, 401)
-    }
-
-    const key = wallet.toLowerCase()
+    // Fall back to IP for demo/unauthenticated requests
+    const key = (wallet || c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'anonymous').toLowerCase()
     const now = Date.now()
 
     let bucket = buckets.get(key)

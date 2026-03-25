@@ -248,6 +248,28 @@ skillsRoutes.post('/:id/stream',
   },
 )
 
+// Chat with skill — demo mode (no auth, for testing)
+skillsRoutes.post('/:id/chat-demo',
+  rateLimiter({ maxRequests: 30, windowMs: 60_000 }),
+  async (c) => {
+    const body = await c.req.json()
+    const { message, history, inputs } = body
+
+    if (!message || typeof message !== 'string') {
+      return c.json({ error: 'message string required' }, 400)
+    }
+
+    try {
+      const result = await chatWithSkill(
+        c.req.param('id'), 'demo-user', message, history || [], inputs || {},
+      )
+      return c.json(result)
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 400)
+    }
+  },
+)
+
 // Chat with skill — conversational mode (signature + rate limit)
 skillsRoutes.post('/:id/chat',
   requireSignature('run-skill'),
