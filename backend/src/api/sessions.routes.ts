@@ -6,12 +6,12 @@ import { ProofRelayer } from '../services/proof/proofRelayer.js'
 import { instanceManager } from '../services/instance/instanceManager.js'
 import { settlementService } from '../services/settlement/settlementService.js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { requireSignature } from '../middleware/verifySignature.js'
+import { requireSignature, type SignatureEnv } from '../middleware/verifySignature.js'
 import { getAgentById } from '../services/registry/agentRegistry.js'
 
 const orchestrator = new SessionOrchestrator()
 
-export const sessionsRoutes = new Hono()
+export const sessionsRoutes = new Hono<SignatureEnv>()
 
 // --- Public read routes ---
 
@@ -83,7 +83,7 @@ sessionsRoutes.post('/:id/spawn',
     if (!agent.active) return c.json({ error: 'Agent is inactive' }, 400)
 
     const sessionId = await orchestrator.createSessionRecord({
-      onchainSessionId: parseInt(c.req.param('id')),
+      onchainSessionId: parseInt(c.req.param('id')!),
       agentId,
       userWallet: wallet, // from verified signature
       totalRate: body.totalRate || 1300,
@@ -104,7 +104,7 @@ sessionsRoutes.post('/:id/spawn',
 sessionsRoutes.post('/:id/pause',
   requireSignature('pause-session'),
   (c) => {
-    const sessionId = c.req.param('id')
+    const sessionId = c.req.param('id')!
     instanceManager.pauseInstance(sessionId)
     const db = getDb()
     db.prepare("UPDATE sessions SET status = 'paused' WHERE id = ?").run(sessionId)
@@ -115,7 +115,7 @@ sessionsRoutes.post('/:id/pause',
 sessionsRoutes.post('/:id/resume',
   requireSignature('resume-session'),
   (c) => {
-    const sessionId = c.req.param('id')
+    const sessionId = c.req.param('id')!
     instanceManager.resumeInstance(sessionId)
     const db = getDb()
     db.prepare("UPDATE sessions SET status = 'active' WHERE id = ?").run(sessionId)
@@ -126,7 +126,7 @@ sessionsRoutes.post('/:id/resume',
 sessionsRoutes.post('/:id/stop',
   requireSignature('stop-session'),
   (c) => {
-    const sessionId = c.req.param('id')
+    const sessionId = c.req.param('id')!
     instanceManager.stopInstance(sessionId)
     const db = getDb()
     db.prepare("UPDATE sessions SET status = 'stopped', ended_at = datetime('now') WHERE id = ?").run(sessionId)
@@ -138,7 +138,7 @@ sessionsRoutes.post('/:id/stop',
 sessionsRoutes.post('/:id/chat',
   requireSignature('session-chat'),
   async (c) => {
-    const sessionId = c.req.param('id')
+    const sessionId = c.req.param('id')!
     const body = await c.req.json()
     const message = body.message
     const history = body.history

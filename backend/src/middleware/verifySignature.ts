@@ -1,4 +1,10 @@
-import type { Context, Next } from 'hono'
+import type { Context, Next, MiddlewareHandler } from 'hono'
+
+export type SignatureEnv = {
+  Variables: {
+    verifiedWallet: string
+  }
+}
 import { verifyMessage } from 'viem'
 
 const TIMESTAMP_MAX_AGE_SEC = 300 // 5 minutes
@@ -25,8 +31,8 @@ export function buildSignMessage(wallet: string, action: string, resourceId: str
  * Includes nonce replay protection — each signature can only be used once.
  * On success, sets c.verifiedWallet to the recovered address.
  */
-export function requireSignature(action: string) {
-  return async (c: Context, next: Next) => {
+export function requireSignature(action: string): MiddlewareHandler<SignatureEnv> {
+  return async (c, next) => {
     const wallet = c.req.header('x-wallet-address')
     const signature = c.req.header('x-signature')
     const timestampStr = c.req.header('x-timestamp')

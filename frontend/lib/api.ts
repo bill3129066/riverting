@@ -1,3 +1,5 @@
+import { PLATFORM_FEE } from './utils'
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export async function fetchAgents() {
@@ -18,11 +20,19 @@ export async function fetchSessions() {
   return res.json()
 }
 
-export async function createSession(agentId: number, userWallet: string) {
+export async function createSession(agentId: number, userWallet: string, curatorRate: number) {
+  const totalRate = curatorRate + PLATFORM_FEE
   const res = await fetch(`${API_BASE}/api/sessions/0/spawn`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ agentId, userWallet, totalRate: 1300, curatorRate: 1000, platformFee: 300, depositAmount: 5000000 }),
+    body: JSON.stringify({
+      agentId,
+      userWallet,
+      totalRate,
+      curatorRate,
+      platformFee: PLATFORM_FEE,
+      depositAmount: totalRate * 3600,
+    }),
   })
   if (!res.ok) throw new Error('Failed to create session')
   return res.json()

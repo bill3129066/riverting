@@ -65,49 +65,49 @@ export default function NewAgentPage() {
   const rateInUSDC = (parseInt(form.curatorRatePerSecond) / 1_000_000).toFixed(6)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-8">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2">Upload New Agent</h1>
-        <p className="text-[#666] mb-8">Define your AI agent's capabilities and pricing.</p>
+    <div className="bg-background min-h-screen text-text-primary">
+      <div className="max-w-[1920px] mx-auto px-24 pt-24 pb-32">
+        <h1 className="font-display font-bold text-[5rem] leading-[0.95] tracking-tight mb-6">Upload New Agent</h1>
+        <p className="text-text-secondary text-lg mb-16 max-w-2xl">Define your AI agent's capabilities and pricing to publish to the network.</p>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl">
           {/* Name */}
           <div>
-            <label htmlFor="agent-name" className="block text-sm text-[#888] mb-1.5">Agent Name *</label>
+            <label htmlFor="agent-name" className="block text-xs text-text-secondary uppercase tracking-widest mb-2">Agent Name *</label>
             <input
               id="agent-name"
               value={form.name} onChange={update('name')} required
               placeholder="e.g. DeFi Pool Analyst"
-              className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 text-white placeholder-[#444] focus:border-[#00d4aa] outline-none"
+              className="w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none transition-colors"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label htmlFor="agent-description" className="block text-sm text-[#888] mb-1.5">Description *</label>
+            <label htmlFor="agent-description" className="block text-xs text-text-secondary uppercase tracking-widest mb-2">Description *</label>
             <textarea
               id="agent-description"
               value={form.description} onChange={update('description')} required rows={3}
               placeholder="What does this agent analyze?"
-              className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 text-white placeholder-[#444] focus:border-[#00d4aa] outline-none resize-none"
+              className="w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none resize-none transition-colors"
             />
           </div>
 
           {/* Category + Template */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-8">
             <div>
-              <label htmlFor="agent-category" className="block text-sm text-[#888] mb-1.5">Category</label>
+              <label htmlFor="agent-category" className="block text-xs text-text-secondary uppercase tracking-widest mb-2">Category</label>
               <select id="agent-category" value={form.category} onChange={update('category')}
-                className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-[#00d4aa] outline-none">
+                className="w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary focus:border-accent outline-none transition-colors appearance-none">
                 <option value="defi">DeFi</option>
                 <option value="trading">Trading</option>
                 <option value="research">Research</option>
               </select>
             </div>
             <div>
-              <label htmlFor="agent-template" className="block text-sm text-[#888] mb-1.5">Analysis Template</label>
+              <label htmlFor="agent-template" className="block text-xs text-text-secondary uppercase tracking-widest mb-2">Analysis Template</label>
               <select id="agent-template" value={form.analysisTemplate} onChange={update('analysisTemplate')}
-                className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-[#00d4aa] outline-none">
+                className="w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary focus:border-accent outline-none transition-colors appearance-none">
                 <option value="pool-snapshot">Pool Snapshot</option>
                 <option value="yield-compare">Yield Compare</option>
               </select>
@@ -116,34 +116,40 @@ export default function NewAgentPage() {
 
           {/* Rate */}
           <div>
-            <label htmlFor="agent-rate" className="block text-sm text-[#888] mb-1.5">
-              Your Rate (USDC micro-units/sec) — {rateInUSDC} USDC/sec
+            <label htmlFor="agent-rate" className="block text-xs text-text-secondary uppercase tracking-widest mb-2">
+              Your Rate (USDC micro-units/sec)
             </label>
             <input
               id="agent-rate"
               type="number" value={form.curatorRatePerSecond} onChange={update('curatorRatePerSecond')}
               min="100" max="10000" step="100"
-              className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-[#00d4aa] outline-none"
+              className="w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary focus:border-accent outline-none transition-colors font-mono"
             />
-            <p className="text-xs text-[#555] mt-1">Platform adds $0.0003/sec. Users pay ${((parseInt(form.curatorRatePerSecond) + 300) / 1_000_000).toFixed(6)}/sec total.</p>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-text-secondary text-sm italic font-display">{rateInUSDC} USDC/sec</span>
+              <span className="text-text-tertiary text-xs">Users pay ${((parseInt(form.curatorRatePerSecond) + 300) / 1_000_000).toFixed(6)}/sec total</span>
+            </div>
           </div>
 
           {/* GitHub URL */}
           <div>
-            <label htmlFor="agent-github" className="block text-sm text-[#888] mb-1.5">GitHub Repository URL *</label>
+            <label htmlFor="agent-github" className="block text-xs text-text-secondary uppercase tracking-widest mb-2">GitHub Repository URL *</label>
             <input
               id="agent-github"
               type="url" value={form.githubUrl} onChange={update('githubUrl')} required
               placeholder="https://github.com/your-org/your-agent"
-              className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 text-white placeholder-[#444] focus:border-[#00d4aa] outline-none font-mono text-sm"
+              className="w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none font-mono text-sm transition-colors"
             />
+            <p className="text-xs text-text-tertiary mt-2">
+              Repo root must contain <code className="text-accent font-mono">skill.json</code> with systemPrompt, model, temperature, analysisTemplates.
+            </p>
           </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-error text-sm mt-4 font-mono">{error}</p>}
 
           <button
             type="submit" disabled={loading || !address}
-            className="w-full bg-[#00d4aa] text-black font-bold py-3.5 rounded-xl hover:bg-[#00b894] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-black text-white font-sans text-xs uppercase tracking-widest py-4 mt-8 hover:bg-black/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
           >
             {loading ? 'Uploading...' : !address ? 'Connect Wallet First' : 'Upload Agent →'}
           </button>

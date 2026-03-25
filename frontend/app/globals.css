@@ -4,6 +4,31 @@
 
 @layer base {
   body {
-    @apply bg-background text-text;
+    @apply bg-background text-text-primary;
   }
+
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+  }
+
+  /* Sharp corners globally */
+  *, *::before, *::after {
+    border-radius: 0 !important;
+  }
+
+  /* Only exception: full-round pills */
+  .rounded-full {
+    border-radius: 9999px !important;
+  }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes border-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 59, 246, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(74, 59, 246, 0.1); }
 }

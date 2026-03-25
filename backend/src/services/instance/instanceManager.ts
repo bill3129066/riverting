@@ -203,14 +203,22 @@ class RealAgentRunner {
       const raw = typeof agent.skill_config_json === 'string'
         ? JSON.parse(agent.skill_config_json)
         : agent.skill_config_json
+
+      // Try to load skill.json from GitHub repo
+      const githubUrl: string = raw.githubUrl || agent.metadata_uri || ''
+      let githubSkill: Partial<SkillConfig> = {}
+      if (githubUrl) {
+        githubSkill = await this.fetchGithubSkill(githubUrl)
+      }
+
       return {
         name: agent.name,
         description: agent.description,
-        systemPrompt: raw.systemPrompt || `You are ${agent.name}. ${agent.description}. Analyze DeFi data and provide clear, concise insights in 2-3 sentences.`,
-        githubUrl: raw.githubUrl || agent.metadata_uri,
-        model: raw.model || 'gemini-2.0-flash',
-        temperature: raw.temperature ?? 0.3,
-        analysisTemplates: raw.analysisTemplates || ['pool-snapshot'],
+        systemPrompt: githubSkill.systemPrompt || raw.systemPrompt || `You are ${agent.name}. ${agent.description}. Analyze DeFi data and provide clear, concise insights in 2-3 sentences.`,
+        githubUrl,
+        model: githubSkill.model || raw.model || 'gemini-2.0-flash',
+        temperature: githubSkill.temperature ?? raw.temperature ?? 0.3,
+        analysisTemplates: githubSkill.analysisTemplates || raw.analysisTemplates || ['pool-snapshot'],
       }
     } catch (e) {
       console.warn(`[RealAgentRunner] Failed to load skill config: ${(e as Error).message}`)
@@ -221,6 +229,27 @@ class RealAgentRunner {
         temperature: 0.3,
         analysisTemplates: ['pool-snapshot'],
       }
+    }
+  }
+
+  private async fetchGithubSkill(githubUrl: string): Promise<Partial<SkillConfig>> {
+    try {
+      // Convert https://github.com/owner/repo to raw URL for skill.json
+      const match = githubUrl.match(/github\.com\/([^/]+\/[^/]+?)(?:\.git)?(?:\/.*)?$/)
+      if (!match) return {}
+      const rawUrl = `https://raw.githubusercontent.com/${match[1]}/main/skill.json`
+      console.log(`[RealAgentRunner] Fetching skill.json from: ${rawUrl}`)
+      const res = await fetch(rawUrl, { signal: AbortSignal.timeout(5000) })
+      if (!res.ok) {
+        console.warn(`[RealAgentRunner] skill.json not found (${res.status}): ${rawUrl}`)
+        return {}
+      }
+      const skill = await res.json()
+      console.log(`[RealAgentRunner] Loaded skill.json from GitHub: ${JSON.stringify(skill).slice(0, 100)}`)
+      return skill
+    } catch (e) {
+      console.warn(`[RealAgentRunner] Failed to fetch skill.json from GitHub: ${(e as Error).message}`)
+      return {}
     }
   }
 
@@ -240,7 +269,7 @@ class RealAgentRunner {
           model: (this.skillConfig.model && this.skillConfig.model.startsWith('gemini')) ? this.skillConfig.model : 'gemini-2.0-flash',
           generationConfig: {
             temperature: this.skillConfig.temperature ?? 0.3,
-            maxOutputTokens: 200,
+            maxOutputTokens: 1024,
           },
           systemInstruction: this.skillConfig.systemPrompt,
         })

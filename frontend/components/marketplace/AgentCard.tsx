@@ -1,3 +1,5 @@
+import { PLATFORM_FEE, formatRate } from '@/lib/utils';
+
 export interface Agent {
   id: number;
   name: string;
@@ -8,45 +10,61 @@ export interface Agent {
   active: number;
 }
 
-const PLATFORM_FEE = 300;
-
-function formatRate(units: number): string {
-  return `$${(units / 1_000_000).toFixed(4)}/sec`;
-}
-
 export default function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
   const totalRate = agent.curator_rate_per_second + PLATFORM_FEE;
 
   return (
-    <button
-      type="button"
+    <div 
+      role="button"
+      tabIndex={0}
+      className="group grid grid-cols-1 md:grid-cols-3 gap-12 items-start py-8 w-full border-t border-border-subtle hover:border-text-primary transition-colors text-left cursor-pointer"
       onClick={onClick}
-      className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5 cursor-pointer hover:border-[#00d4aa] transition-all duration-200 hover:shadow-[0_0_20px_rgba(0,212,170,0.1)] flex flex-col h-full text-left w-full"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          onClick();
+        }
+      }}
     >
-      <div className="flex-1 w-full">
-        <span className="inline-block text-xs bg-[#00d4aa]/10 text-[#00d4aa] px-2 py-1 rounded-full uppercase tracking-wide">
+      <div className="md:col-span-1 flex flex-col items-start">
+        <span className="bg-surface-dim px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-text-tertiary mb-6">
           {agent.category}
         </span>
-        
-        <h3 className="text-lg font-semibold mt-3 mb-1">{agent.name}</h3>
-        
-        <p className="text-[#888] text-sm mb-4 line-clamp-2">{agent.description}</p>
+        <h3 className="font-display font-bold text-4xl text-text-primary tracking-tight mb-4 group-hover:text-accent transition-colors">
+          {agent.name}
+        </h3>
+        <div className="w-12 h-0.5 bg-accent/30 transition-all duration-300 group-hover:w-24 group-hover:bg-accent"></div>
       </div>
       
-      <div className="border-t border-[#1a1a1a] pt-3 mt-auto space-y-1 w-full">
-        <div className="flex justify-between text-xs text-[#666]">
-          <span>Curator</span>
-          <span>{formatRate(agent.curator_rate_per_second)}</span>
+      <div className="md:col-span-2 flex flex-col h-full justify-between">
+        <p className="text-text-secondary text-lg leading-relaxed mb-8 max-w-3xl">
+          {agent.description}
+        </p>
+        
+        <div className="grid grid-cols-3 border-t border-border-subtle pt-4 mt-auto items-end">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-text-tertiary mb-1">Curator</div>
+            <div className="font-sans text-sm text-text-secondary">{formatRate(agent.curator_rate_per_second)}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-text-tertiary mb-1">Platform</div>
+            <div className="font-sans text-sm text-text-secondary">{formatRate(PLATFORM_FEE)}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-accent mb-1 font-bold">Total</div>
+            <div className="font-sans text-lg text-accent font-bold">{formatRate(totalRate)}</div>
+          </div>
         </div>
-        <div className="flex justify-between text-xs text-[#666]">
-          <span>Platform</span>
-          <span>{formatRate(PLATFORM_FEE)}</span>
-        </div>
-        <div className="flex justify-between text-sm font-semibold text-[#00d4aa]">
-          <span>Total</span>
-          <span>{formatRate(totalRate)}</span>
+        <div className="flex justify-end mt-6">
+          <button 
+            type="button"
+            className="bg-text-primary text-surface px-8 py-3 text-xs uppercase tracking-widest font-bold group-hover:bg-accent transition-colors flex items-center gap-2"
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+          >
+            Start Session
+            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+          </button>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
