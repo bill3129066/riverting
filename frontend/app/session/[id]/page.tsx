@@ -6,6 +6,7 @@ import ProofHeartbeatTimeline from '@/components/session/ProofHeartbeatTimeline'
 import AgentWorkTimeline from '@/components/session/AgentWorkTimeline'
 import StreamStatusBadge from '@/components/session/StreamStatusBadge'
 import CostBreakdown from '@/components/session/CostBreakdown'
+import MagiConsensusEngine from '@/components/session/MagiConsensusEngine'
 
 interface ChatMessage {
   role: 'user' | 'model'
@@ -153,6 +154,9 @@ export default function SessionPage() {
           <StreamStatusBadge status={status} />
         </div>
       </div>
+
+      {/* MAGI Consensus Engine */}
+      <MagiConsensusEngine />
 
       {/* Main grid */}
       <div className="grid grid-cols-12 gap-8 items-start">
