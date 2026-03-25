@@ -111,7 +111,10 @@ export async function runSkillOnce(
     const { output, tokensUsed, toolCallCount } = await geminiQueue.run(async () => {
       const genAI = new GoogleGenerativeAI(geminiApiKey)
       const toolUse = hasToolUse(skill)
-      const tools = toolUse ? [{ functionDeclarations: getToolDeclarations(skill.tools_json) }] : undefined
+      // Gemini API: Google Search and Function Calling cannot be combined
+      const tools = toolUse
+        ? [{ functionDeclarations: getToolDeclarations(skill.tools_json) }]
+        : [{ googleSearch: {} }]
 
       const model = genAI.getGenerativeModel({
         model: resolveModel(skill),
@@ -121,8 +124,8 @@ export async function runSkillOnce(
         },
         systemInstruction: getSystemPrompt(skill),
         tools,
-        ...(toolUse ? { toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.AUTO } } } : {}),
-      })
+        toolConfig: toolUse ? { functionCallingConfig: { mode: FunctionCallingMode.AUTO } } : undefined,
+      } as any)
 
       if (!toolUse) {
         // Simple single-shot
@@ -238,7 +241,10 @@ export function runSkillStream(
         await geminiQueue.run(async () => {
           const genAI = new GoogleGenerativeAI(geminiApiKey)
           const toolUse = hasToolUse(skill)
-          const tools = toolUse ? [{ functionDeclarations: getToolDeclarations(skill.tools_json) }] : undefined
+          // Gemini API: Google Search and Function Calling cannot be combined
+          const tools = toolUse
+            ? [{ functionDeclarations: getToolDeclarations(skill.tools_json) }]
+            : [{ googleSearch: {} }]
 
           const model = genAI.getGenerativeModel({
             model: resolveModel(skill),
@@ -248,8 +254,8 @@ export function runSkillStream(
             },
             systemInstruction: getSystemPrompt(skill),
             tools,
-            ...(toolUse ? { toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.AUTO } } } : {}),
-          })
+            toolConfig: toolUse ? { functionCallingConfig: { mode: FunctionCallingMode.AUTO } } : undefined,
+          } as any)
 
           if (!toolUse) {
             // Simple streaming without tools
