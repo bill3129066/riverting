@@ -10,7 +10,7 @@ import { TOOL_USE_SYSTEM_PROMPT, buildToolUsePrompt } from './promptBuilder.js'
 import type { SkillRow, SkillExecutionRow } from '../../types/index.js'
 
 const MAX_TOOL_CALLS = parseInt(process.env.MAX_TOOL_CALLS_PER_EXECUTION || '50')
-const DEFAULT_MODEL = 'gemini-2.0-flash'
+const DEFAULT_MODEL = 'gemini-2.5-flash'
 
 interface RunResult {
   executionId: string

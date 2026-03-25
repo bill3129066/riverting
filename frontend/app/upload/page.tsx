@@ -45,7 +45,7 @@ export default function UploadSkillPage() {
     category: 'general',
     systemPrompt: '',
     userPromptTemplate: '',
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     temperature: '0.3',
     maxTokens: '1024',
     pricePerRun: '0',
@@ -242,7 +242,7 @@ export default function UploadSkillPage() {
         systemPrompt: masterPrompt,
         rawSystemPrompt: parsed.systemPrompt,
         userPromptTemplate: 'Analyze: {{query}}\n\nChain: {{chain}}\nTarget address (if any): {{address}}',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
         temperature: 0.2,
         maxTokens: 2048,
         pricePerRun: parseInt(importPrice),
@@ -272,7 +272,7 @@ export default function UploadSkillPage() {
           systemPrompt: pattern.content.slice(0, 8000),
           rawSystemPrompt: originalPattern?.content,
           userPromptTemplate: '{{query}}\n\nTarget: {{address}}\nChain: {{chain}}',
-          model: 'gemini-2.0-flash',
+          model: 'gemini-2.5-flash',
           temperature: 0.2,
           maxTokens: 2048,
           pricePerRun: parseInt(importPrice),
@@ -507,8 +507,8 @@ export default function UploadSkillPage() {
               <div>
                 <label className={labelCls}>Model</label>
                 <select value={form.model} onChange={update('model')} className={inputCls}>
-                  <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                  <option value="gemini-2.5-pro-exp-03-25">Gemini 2.5 Pro</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                  <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                 </select>
               </div>
               <div>

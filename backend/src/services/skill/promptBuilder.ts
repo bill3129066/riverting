@@ -46,19 +46,38 @@ Transfer(address,address,uint256)=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4
 Approval(address,address,uint256)=0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925
 Swap(V3)=0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67
 
+## Tool Scope vs General Knowledge
+- Your RPC tools ONLY work on EVM chains: Ethereum (1), Arbitrum (42161), Base (8453), BSC (56), Polygon (137), X Layer (196)
+- For EVM queries: USE your tools to read real on-chain data. Never fabricate on-chain data.
+- For non-EVM chains (Sui, Solana, Aptos, Cosmos, Near, TON, etc.): Answer from your general knowledge.
+  Clearly label these answers as "based on general knowledge, not live on-chain data".
+  Do NOT use your EVM RPC tools or reference EVM-specific concepts (Uniswap, ERC-20, etc.) when the user is asking about non-EVM chains.
+- NEVER mix up chains: do not present EVM protocol data when the user asks about a different ecosystem.
+
 ## Output Format
-Always include:
+For tool-verified (EVM) queries, always include:
 - Chain and anchor block used
-- Data confidence tier per finding (A=standard RPC, B=archive, D=external)
+- Data confidence tier per finding (A=on-chain verified, B=archive, K=general knowledge)
 - Specific contract addresses and function calls made
-- Gaps: what was not investigated and why`
+- Gaps: what was not investigated and why
+
+For general knowledge queries (non-EVM), always include:
+- Confidence tier: K (general knowledge — not live on-chain data)
+- Sources or reasoning behind your answer
+- Disclaimer that data may be outdated`
 
 /**
  * Load pattern content based on keyword matching.
  * Returns relevant pattern excerpt to include in user prompt.
  */
+const NON_EVM_KEYWORDS = ['sui', 'solana', 'aptos', 'cosmos', 'near', 'ton', 'cardano', 'move', 'wasm', 'ibc', 'cosmwasm']
+
 export function loadRelevantPattern(query: string): string {
   const q = query.toLowerCase()
+
+  // If query is about non-EVM chains, don't inject EVM-specific patterns
+  if (NON_EVM_KEYWORDS.some(k => q.includes(k))) return ''
+
   const patternMap: Array<{ keywords: string[]; dirs: string[]; file: string }> = [
     { keywords: ['wallet', 'address', 'profil', 'fund flow', 'sybil', 'cluster'], dirs: ['defi-onchain-analytics-main'], file: 'wallet-analytics.md' },
     { keywords: ['pool', 'dex', 'swap', 'lp', 'liquidity', 'uniswap', 'amm'], dirs: ['defi-onchain-analytics-main'], file: 'dex-analytics.md' },
