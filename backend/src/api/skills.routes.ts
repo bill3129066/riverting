@@ -3,7 +3,7 @@ import {
   listSkills, getSkillById, createSkill, updateSkill, deactivateSkill,
   rateSkill, getUserRating, getSkillStats,
 } from '../services/skill/skillRegistry.js'
-import { runSkillOnce, runSkillStream, getExecutionsBySkill } from '../services/skill/skillExecutor.js'
+import { runSkillOnce, runSkillStream, chatWithSkill, getExecutionsBySkill } from '../services/skill/skillExecutor.js'
 import { compressSkillPrompt, compressPattern } from '../services/skill/skillCompressor.js'
 import { getBalance, deposit } from '../services/skill/billing.js'
 import { requireSignature } from '../middleware/verifySignature.js'
@@ -242,6 +242,38 @@ skillsRoutes.post('/:id/stream',
           'X-Execution-Id': executionId,
         },
       })
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 400)
+    }
+  },
+)
+
+// Chat with skill — conversational mode (signature + rate limit)
+skillsRoutes.post('/:id/chat',
+  requireSignature('run-skill'),
+  rateLimiter({ maxRequests: 30, windowMs: 60_000 }),
+  async (c) => {
+    const wallet: string = c.get('verifiedWallet')
+    const body = await c.req.json()
+    const { message, history, inputs } = body
+
+    if (!message || typeof message !== 'string') {
+      return c.json({ error: 'message string required' }, 400)
+    }
+
+    if (history && !Array.isArray(history)) {
+      return c.json({ error: 'history must be an array' }, 400)
+    }
+
+    try {
+      const result = await chatWithSkill(
+        c.req.param('id'),
+        wallet,
+        message,
+        history || [],
+        inputs || {},
+      )
+      return c.json(result)
     } catch (e) {
       return c.json({ error: (e as Error).message }, 400)
     }

@@ -167,6 +167,29 @@ export async function runSkillStream(
   }
 }
 
+// --- Chat mode ---
+
+export async function chatWithSkill(
+  id: string,
+  message: string,
+  history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
+  inputs: Record<string, unknown>,
+  auth: SignedHeaders,
+): Promise<{ reply: string; tokensUsed: number | null; toolCallCount: number }> {
+  const res = await fetch(`${API_BASE}/api/skills/${id}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify({ message, history, inputs }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to chat with skill')
+  }
+  return res.json()
+}
+
+// --- Delete ---
+
 export async function deleteSkill(id: string, auth: SignedHeaders) {
   const res = await fetch(`${API_BASE}/api/skills/${id}`, {
     method: 'DELETE',

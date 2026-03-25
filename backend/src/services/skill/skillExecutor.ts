@@ -344,6 +344,92 @@ export function runSkillStream(
   return { executionId, stream }
 }
 
+// ─── Chat mode ──────────────────────────────────────────────
+
+interface ChatMessage {
+  role: 'user' | 'model'
+  parts: Array<{ text: string }>
+}
+
+interface ChatResult {
+  reply: string
+  tokensUsed: number | null
+  toolCallCount: number
+}
+
+export async function chatWithSkill(
+  skillId: string,
+  userWallet: string,
+  message: string,
+  history: ChatMessage[],
+  inputs: Record<string, unknown> = {},
+): Promise<ChatResult> {
+  const skill = getSkillById(skillId)
+  if (!skill) throw new Error('Skill not found')
+  if (!skill.active) throw new Error('Skill is inactive')
+
+  const geminiApiKey = process.env.GEMINI_API_KEY
+  if (!geminiApiKey) throw new Error('GEMINI_API_KEY not configured')
+
+  return geminiQueue.run(async () => {
+    const genAI = new GoogleGenerativeAI(geminiApiKey)
+    const toolUse = hasToolUse(skill)
+    // Gemini API: Google Search and Function Calling cannot be combined
+    const tools = toolUse
+      ? [{ functionDeclarations: getToolDeclarations(skill.tools_json) }]
+      : [{ googleSearch: {} }]
+
+    const model = genAI.getGenerativeModel({
+      model: resolveModel(skill),
+      generationConfig: {
+        temperature: skill.temperature ?? 0.3,
+        maxOutputTokens: toolUse ? 4096 : (skill.max_tokens || 1024),
+      },
+      systemInstruction: getSystemPrompt(skill),
+      tools,
+      toolConfig: toolUse ? { functionCallingConfig: { mode: FunctionCallingMode.AUTO } } : undefined,
+    } as any)
+
+    // Build initial context from inputs if this is the first message (no history)
+    const isFirstMessage = history.length === 0
+    let effectiveMessage = message
+    if (isFirstMessage && Object.keys(inputs).length > 0 && skill.user_prompt_template) {
+      effectiveMessage = buildUserPrompt(skill, { ...inputs, query: message, _query: message })
+    }
+
+    const chat = model.startChat({ history })
+    let response = await chat.sendMessage(effectiveMessage)
+    let toolCallCount = 0
+
+    // Tool-use loop
+    while (toolUse && response.response.functionCalls()?.length) {
+      if (toolCallCount >= MAX_TOOL_CALLS) {
+        response = await chat.sendMessage('Maximum tool call limit reached. Synthesize findings from the data collected so far.')
+        break
+      }
+
+      const functionCalls = response.response.functionCalls()!
+      const functionResponses: FunctionResponsePart[] = []
+
+      for (const fc of functionCalls) {
+        toolCallCount++
+        const result = await executeRpcTool(fc.name, fc.args as Record<string, unknown>)
+        functionResponses.push({
+          functionResponse: { name: fc.name, response: result },
+        })
+      }
+
+      response = await chat.sendMessage(functionResponses)
+    }
+
+    const text = response.response.text()
+    const usage = response.response.usageMetadata
+    const tokensUsed = usage ? (usage.promptTokenCount || 0) + (usage.candidatesTokenCount || 0) : null
+
+    return { reply: text, tokensUsed, toolCallCount }
+  })
+}
+
 // ─── Query helpers ───────────────────────────────────────────
 
 export function getExecutionsBySkill(
