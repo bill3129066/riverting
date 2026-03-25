@@ -58,7 +58,9 @@ class InstanceManager {
             `INSERT INTO session_steps (id, session_id, seq, step_type, title, body, created_at)
              VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
           ).run(stepId, sessionId, seq, step.kind, step.title, step.body.slice(0, 500))
-        } catch (_e) {}
+        } catch (e) {
+          console.error(`[InstanceManager] Failed to insert step for session ${sessionId}:`, e)
+        }
 
         sseHub.emitStep(sessionId, step)
       },
@@ -88,7 +90,8 @@ class InstanceManager {
     this.instances.set(sessionId, instance)
 
     runner.start().catch((e: Error) => {
-      console.log(`[InstanceManager] Runner error: ${e.message}`)
+      console.error(`[InstanceManager] Runner failed for session ${sessionId}: ${e.message}`)
+      this.instances.delete(sessionId) // Clean up zombie instance
     })
 
     return instanceId
@@ -263,7 +266,7 @@ class RealAgentRunner {
     if (this.genAI && this.skillConfig) {
       try {
         const model = this.genAI.getGenerativeModel({
-          model: this.skillConfig.model || 'gemini-2.0-flash',
+          model: (this.skillConfig.model && this.skillConfig.model.startsWith('gemini')) ? this.skillConfig.model : 'gemini-2.0-flash',
           generationConfig: {
             temperature: this.skillConfig.temperature ?? 0.3,
             maxOutputTokens: 1024,

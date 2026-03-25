@@ -27,6 +27,8 @@ export function NavBar() {
             Riverting
           </Link>
           <div className="flex gap-8">
+            {navLink('/skills', 'Skills', pathname === '/skills' || (pathname?.startsWith('/skills/') ?? false))}
+            {navLink('/upload', 'Upload Skill', pathname === '/upload')}
             {navLink('/marketplace', 'Browse Agents', pathname === '/marketplace')}
             {navLink('/sessions', 'My Sessions', pathname?.startsWith('/sessions') ?? false)}
             {navLink('/curator', 'Upload Agent', pathname?.startsWith('/curator') ?? false)}

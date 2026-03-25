@@ -26,14 +26,10 @@ export class SettlementService {
     const earnedAmount = Math.floor(durationSec * session.curator_rate)
     if (earnedAmount <= 0) return
 
-    const existing = db
-      .prepare('SELECT id FROM curator_earnings WHERE session_id = ?')
-      .get(sessionId)
-    if (existing) return
-
-    db.prepare(
+    // Use INSERT OR IGNORE to prevent duplicate settlement race condition
+    const result = db.prepare(
       `
-      INSERT INTO curator_earnings (id, curator_wallet, agent_id, session_id, earned_amount, paid_out)
+      INSERT OR IGNORE INTO curator_earnings (id, curator_wallet, agent_id, session_id, earned_amount, paid_out)
       VALUES (?, ?, ?, ?, ?, 0)
     `,
     ).run(
@@ -43,6 +39,7 @@ export class SettlementService {
       sessionId,
       earnedAmount,
     )
+    if (result.changes === 0) return // already settled
 
     console.log(
       `[Settlement] Recorded ${earnedAmount} USDC units for curator ${agent.curator_wallet}`,

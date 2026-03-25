@@ -47,6 +47,10 @@ export class ProofRelayer {
 
     if (now - lastProof < PROOF_INTERVAL_MS) return
 
+    // Re-check session status to avoid submitting proofs for paused/stopped sessions
+    const current = db.prepare('SELECT status FROM sessions WHERE id = ?').get(session.id) as { status: string } | undefined
+    if (!current || current.status !== 'active') return
+
     const seq = (proofSeqs.get(session.id) || 0) + 1
 
     const lastProofRecord = db
