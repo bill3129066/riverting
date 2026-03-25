@@ -278,17 +278,38 @@ export default function SkillDetailPage() {
 
             {/* Balance info */}
             {address && (
-              <div className="flex items-center justify-between mt-3 text-xs text-[#666]">
-                <span>
-                  Balance: {balance !== null ? `$${(balance / 1_000_000).toFixed(4)}` : '...'}
-                  {skill.price_per_run > 0 && balance !== null && balance < skill.price_per_run && (
-                    <span className="text-red-400 ml-1">(insufficient)</span>
-                  )}
-                </span>
-                <button onClick={handleDeposit} disabled={depositing}
-                  className="text-[#00d4aa] hover:text-[#00b894] transition-colors disabled:opacity-50">
-                  {depositing ? 'Depositing...' : '+ Deposit 5 USDC (demo)'}
-                </button>
+              <div className="mt-4 space-y-2">
+                {skill.price_per_run > 0 && balance !== null && balance < skill.price_per_run ? (
+                  <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-red-400 font-medium">Insufficient balance</span>
+                      <span className="text-[#555]">Need {formatPrice(skill.price_per_run)} · Have ${(balance / 1_000_000).toFixed(4)}</span>
+                    </div>
+                    <p className="text-xs text-[#666]">Deposit funds in Settings to run this Skill</p>
+                    <div className="flex gap-2">
+                      <a href="/settings" className="flex-1 text-center text-xs bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20 rounded-lg py-2 hover:bg-[#00d4aa]/20 transition-colors">
+                        Go to Settings to deposit
+                      </a>
+                      <button onClick={handleDeposit} disabled={depositing}
+                        className="flex-1 text-xs bg-[#1a1a1a] text-[#888] border border-[#222] rounded-lg py-2 hover:border-[#444] transition-colors disabled:opacity-50">
+                        {depositing ? 'Depositing...' : '+ Demo deposit 5 USDC'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between text-xs text-[#555]">
+                    <span>
+                      Platform balance:
+                      <span className="text-[#00d4aa] ml-1">
+                        {balance !== null ? `$${(balance / 1_000_000).toFixed(4)}` : '...'}
+                      </span>
+                    </span>
+                    <button onClick={handleDeposit} disabled={depositing}
+                      className="text-[#444] hover:text-[#666] transition-colors disabled:opacity-50">
+                      {depositing ? 'Depositing...' : '+ Deposit'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
