@@ -10,6 +10,10 @@ TEAL='\033[0;36m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+# Kill any stale process on port 3001
+lsof -ti :3001 | xargs kill 2>/dev/null || true
+sleep 1
+
 echo -e "${TEAL}1. Starting backend...${NC}"
 cd backend
 bun run src/db/init.ts
@@ -23,10 +27,9 @@ AGENTS=$(curl -s http://localhost:3001/api/agents | python3 -c "import sys,json;
 echo -e "${GREEN}   ✅ $AGENTS agents in catalog${NC}"
 
 echo -e "${TEAL}3. Creating demo session...${NC}"
-RESULT=$(curl -s -X POST http://localhost:3001/api/sessions/1/spawn \
-  -H "Content-Type: application/json" \
-  -d '{"agentId":1,"userWallet":"0xDemoUser","totalRate":1300,"curatorRate":1000,"platformFee":300,"depositAmount":5000000}')
-SESSION_ID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin).get('sessionId','error'))")
+AGENT_ID=$(curl -s http://localhost:3001/api/agents | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'])")
+SESSION_ID=$(python3 -c "import uuid; print(uuid.uuid4())")
+sqlite3 dev.db "INSERT INTO sessions (id, agent_id, user_wallet, status, total_rate, curator_rate, platform_fee, deposit_amount, started_at) VALUES ('${SESSION_ID}', '${AGENT_ID}', '0xdemouser', 'active', 1300, 1000, 300, 5000000, datetime('now'))"
 echo -e "${GREEN}   ✅ Session: $SESSION_ID${NC}"
 
 echo -e "${TEAL}4. Starting frontend...${NC}"
