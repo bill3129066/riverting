@@ -34,7 +34,7 @@ export class SettlementService {
     `,
     ).run(
       randomUUID(),
-      agent.curator_wallet,
+      agent.creator_wallet,
       agent.id,
       sessionId,
       earnedAmount,
@@ -42,7 +42,7 @@ export class SettlementService {
     if (result.changes === 0) return // already settled
 
     console.log(
-      `[Settlement] Recorded ${earnedAmount} USDC units for curator ${agent.curator_wallet}`,
+      `[Settlement] Recorded ${earnedAmount} USDC units for curator ${agent.creator_wallet}`,
     )
   }
 

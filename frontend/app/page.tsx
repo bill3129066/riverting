@@ -18,14 +18,14 @@ export default function HomePage() {
           </div>
           <div className="lg:col-span-4 flex flex-col justify-end items-start gap-8">
             <Link 
-              href="/marketplace"
+              href="/agents"
               className="group flex items-center gap-4 border-b border-text-primary pb-2 text-xl font-medium transition-colors hover:text-accent hover:border-accent"
             >
               Browse Agents
               <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
             </Link>
             <Link 
-              href="/curator"
+              href="/agents/new"
               className="group flex items-center gap-4 border-b border-text-tertiary pb-2 text-xl font-medium text-text-secondary transition-colors hover:text-text-primary hover:border-text-primary"
             >
               Upload Agent
@@ -42,7 +42,7 @@ export default function HomePage() {
               role: 'Agent Curator',
               description: 'Configure your agent with prompts, tools, and pricing. Earn USDC while users run it.',
               action: 'Deploy Agent',
-              href: '/curator/agents/new',
+              href: '/agents/new',
               statLabel: 'REVENUE',
               statValue: 'Per-second',
             },
@@ -58,7 +58,7 @@ export default function HomePage() {
               role: 'User',
               description: 'Browse the catalog. Pay for agent compute by the second in USDC. No lock-ins.',
               action: 'Browse Agents',
-              href: '/marketplace',
+              href: '/agents',
               statLabel: 'COST',
               statValue: 'Pay-as-you-go',
             },

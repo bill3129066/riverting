@@ -1,4 +1,18 @@
 CREATE TABLE IF NOT EXISTS agents (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  onchain_agent_id INTEGER,
+  curator_wallet TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'defi',
+  curator_rate_per_second INTEGER NOT NULL,
+  skill_config_json TEXT NOT NULL,
+  metadata_uri TEXT,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS agents_v2 (
   id TEXT PRIMARY KEY,
   onchain_agent_id INTEGER UNIQUE,
   creator_wallet TEXT NOT NULL,
@@ -23,14 +37,14 @@ CREATE TABLE IF NOT EXISTS agents (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_agents_category ON agents(category);
-CREATE INDEX IF NOT EXISTS idx_agents_creator_wallet ON agents(creator_wallet);
-CREATE INDEX IF NOT EXISTS idx_agents_active ON agents(active);
-CREATE INDEX IF NOT EXISTS idx_agents_run_count ON agents(run_count);
+CREATE INDEX IF NOT EXISTS idx_agents_v2_category ON agents_v2(category);
+CREATE INDEX IF NOT EXISTS idx_agents_v2_creator_wallet ON agents_v2(creator_wallet);
+CREATE INDEX IF NOT EXISTS idx_agents_v2_active ON agents_v2(active);
+CREATE INDEX IF NOT EXISTS idx_agents_v2_run_count ON agents_v2(run_count);
 
 CREATE TABLE IF NOT EXISTS agent_executions (
   id TEXT PRIMARY KEY,
-  agent_id TEXT NOT NULL REFERENCES agents(id),
+  agent_id TEXT NOT NULL REFERENCES agents_v2(id),
   user_wallet TEXT NOT NULL,
   session_id TEXT,
   input_json TEXT,
@@ -47,7 +61,7 @@ CREATE TABLE IF NOT EXISTS agent_executions (
 
 CREATE TABLE IF NOT EXISTS agent_ratings (
   id TEXT PRIMARY KEY,
-  agent_id TEXT NOT NULL REFERENCES agents(id),
+  agent_id TEXT NOT NULL REFERENCES agents_v2(id),
   user_wallet TEXT NOT NULL,
   rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -57,7 +71,7 @@ CREATE TABLE IF NOT EXISTS agent_ratings (
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   onchain_session_id INTEGER,
-  agent_id TEXT NOT NULL REFERENCES agents(id),
+  agent_id TEXT NOT NULL REFERENCES agents_v2(id),
   user_wallet TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'created',
   total_rate INTEGER NOT NULL,
@@ -93,7 +107,7 @@ CREATE TABLE IF NOT EXISTS proofs (
 CREATE TABLE IF NOT EXISTS curator_earnings (
   id TEXT PRIMARY KEY,
   curator_wallet TEXT NOT NULL,
-  agent_id TEXT NOT NULL REFERENCES agents(id),
+  agent_id TEXT NOT NULL REFERENCES agents_v2(id),
   session_id TEXT NOT NULL REFERENCES sessions(id),
   earned_amount INTEGER NOT NULL,
   paid_out INTEGER NOT NULL DEFAULT 0,
@@ -106,7 +120,7 @@ CREATE INDEX IF NOT EXISTS idx_curator_earnings_wallet ON curator_earnings(curat
 
 CREATE TABLE IF NOT EXISTS query_sales (
   id TEXT PRIMARY KEY,
-  agent_id TEXT NOT NULL REFERENCES agents(id),
+  agent_id TEXT NOT NULL REFERENCES agents_v2(id),
   route TEXT NOT NULL,
   payer_address TEXT NOT NULL,
   amount_usdc TEXT NOT NULL,
@@ -116,7 +130,7 @@ CREATE TABLE IF NOT EXISTS query_sales (
 
 CREATE TABLE IF NOT EXISTS skills (
   id TEXT PRIMARY KEY,
-  agent_id TEXT REFERENCES agents(id),
+  agent_id INTEGER REFERENCES agents(id),
   creator_wallet TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT NOT NULL,
