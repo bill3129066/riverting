@@ -209,274 +209,282 @@ export default function SkillDetailPage() {
     sendMessage(initialMessage)
   }
 
-  if (loading) return <div className="min-h-screen bg-[#0a0a0a] text-white p-8"><p className="text-[#888]">Loading...</p></div>
-  if (!skill) return <div className="min-h-screen bg-[#0a0a0a] text-white p-8"><p className="text-red-400">Skill not found</p></div>
+  if (loading) return <div className="min-h-screen bg-background text-text-primary p-24"><p className="text-text-secondary uppercase tracking-widest text-xs">Loading...</p></div>
+  if (!skill) return <div className="min-h-screen bg-background text-text-primary p-24"><p className="text-error uppercase tracking-widest text-xs">Skill not found</p></div>
 
-  const inputCls = 'w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 text-white placeholder-[#444] focus:border-[#00d4aa] outline-none'
+  const inputCls = 'w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none transition-colors'
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-8">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-background text-text-primary">
+      <div className="max-w-[1920px] mx-auto px-24 pt-24 pb-32">
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-xs bg-[#00d4aa]/10 text-[#00d4aa] px-2 py-1 rounded-full uppercase tracking-wide">
+        <div className="mb-16 border-b border-border-strong pb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <span className="text-xs text-accent border border-accent/30 bg-accent/5 px-2 py-1 uppercase tracking-widest">
               {skill.category}
             </span>
-            <span className="text-xs bg-[#222] text-[#888] px-2 py-1 rounded-full">Chat Mode</span>
-            <span className="text-xs text-[#666]">{skill.run_count} runs</span>
-            {skill.avg_rating && <span className="text-xs text-[#888]">{'★'} {skill.avg_rating.toFixed(1)}</span>}
+            <span className="text-xs bg-surface-dim border border-border-subtle text-text-secondary px-2 py-1 uppercase tracking-widest">Chat Mode</span>
+            <span className="text-xs text-text-tertiary uppercase tracking-widest">{skill.run_count} runs</span>
+            {skill.avg_rating && <span className="text-xs text-text-secondary uppercase tracking-widest">{'★'} {skill.avg_rating.toFixed(1)}</span>}
           </div>
-          <h1 className="text-3xl font-bold mb-1">{skill.name}</h1>
-          <p className="text-[#888]">{skill.description}</p>
-          <div className="flex items-center gap-3 mt-2">
-            <p className="text-xs text-[#555]">
+          <h1 className="text-[4rem] font-display font-bold leading-none mb-4">{skill.name}</h1>
+          <p className="font-display italic text-2xl text-text-secondary mb-6">{skill.description}</p>
+          <div className="flex items-center gap-4 text-xs uppercase tracking-widest text-text-tertiary">
+            <p>
               By {skill.creator_wallet.slice(0, 6)}...{skill.creator_wallet.slice(-4)} · {skill.model} · {formatPrice(skill.price_per_run)}/msg
             </p>
             {isOwner && (
               <button onClick={handleDelete}
-                className="text-xs text-[#666] hover:text-red-400 border border-[#333] hover:border-red-400/50 px-2 py-0.5 rounded transition-colors">
+                className="text-error hover:opacity-80 border border-error/30 px-3 py-1 transition-colors">
                 Delete Skill
               </button>
             )}
           </div>
         </div>
 
-        {/* Main area */}
-        {!chatStarted ? (
-          /* ── Pre-chat: Input form ── */
-          <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-6 max-w-2xl">
-            <h2 className="text-lg font-semibold mb-4">Start a conversation</h2>
-            <p className="text-sm text-[#666] mb-4">Fill in the parameters below to begin. You can ask follow-up questions after the initial analysis.</p>
+        <div className="max-w-3xl mx-auto">
+          {/* Main area */}
+          {!chatStarted ? (
+            /* ── Pre-chat: Input form ── */
+            <div className="border border-border-subtle bg-surface-elevated p-8 mb-12">
+              <h2 className="text-xs uppercase tracking-widest text-text-secondary mb-2">Start a conversation</h2>
+              <p className="font-display text-lg text-text-secondary mb-8">Fill in the parameters below to begin. You can ask follow-up questions after the initial analysis.</p>
 
-            {inputFields.length > 0 ? (
-              <div className="space-y-4">
-                {inputFields.map(field => (
-                  <div key={field.name}>
-                    <label className="block text-sm text-[#888] mb-1.5">
-                      {field.name} {field.required && <span className="text-[#00d4aa]">*</span>}
-                    </label>
-                    <input type={field.type} value={inputs[field.name] || ''}
-                      onChange={e => setInputs(prev => ({ ...prev, [field.name]: e.target.value }))}
-                      placeholder={`Enter ${field.name}`} required={field.required} className={inputCls}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm text-[#888] mb-1.5">Query</label>
-                <textarea value={inputs._query || ''}
-                  onChange={e => setInputs(prev => ({ ...prev, _query: e.target.value }))}
-                  placeholder="Enter your query..."
-                  rows={3} className={`${inputCls} resize-none`}
-                />
-              </div>
-            )}
-
-            {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
-
-            {/* Mode toggle */}
-            <div className="mt-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setDemoMode(false)}
-                  className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-                    !demoMode ? 'bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/30' : 'text-[#666] border-[#333] hover:border-[#555]'
-                  }`}>
-                  Wallet Mode
-                </button>
-                <button
-                  onClick={() => setDemoMode(true)}
-                  className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-                    demoMode ? 'bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/30' : 'text-[#666] border-[#333] hover:border-[#555]'
-                  }`}>
-                  Demo Mode
-                </button>
-              </div>
-              {!demoMode && !address && <span className="text-xs text-[#666]">Connect wallet to use</span>}
-            </div>
-
-            <button onClick={handleStartChat}
-              disabled={!demoMode && !address}
-              className="w-full mt-3 bg-[#00d4aa] text-black font-bold py-3 rounded-xl hover:bg-[#00b894] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {demoMode ? 'Start Conversation (Demo)' : !address ? 'Connect Wallet First' : 'Start Conversation'}
-            </button>
-
-            {/* Balance info */}
-            {!demoMode && address && (
-              <div className="mt-4 flex items-center justify-between text-xs text-[#555]">
-                <span>
-                  Platform balance:
-                  <span className="text-[#00d4aa] ml-1">
-                    {balance !== null ? `$${(balance / 1_000_000).toFixed(4)}` : '...'}
-                  </span>
-                </span>
-                <button onClick={handleDeposit} disabled={depositing}
-                  className="text-[#444] hover:text-[#666] transition-colors disabled:opacity-50">
-                  {depositing ? 'Depositing...' : '+ Deposit'}
-                </button>
-              </div>
-            )}
-            {demoMode && (
-              <p className="mt-3 text-xs text-[#555]">Demo mode: no wallet or payment required, free to test.</p>
-            )}
-          </div>
-        ) : (
-          /* ── Chat interface ── */
-          <div className="flex flex-col h-[calc(100vh-280px)]">
-            {/* Chat header */}
-            <div className="flex items-center justify-between bg-[#111] border border-b-0 border-[#1a1a1a] rounded-t-xl px-4 py-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${demoMode ? 'bg-yellow-500/10 text-yellow-400' : 'bg-[#00d4aa]/10 text-[#00d4aa]'}`}>
-                {demoMode ? 'Demo Mode' : `${address?.slice(0, 6)}...${address?.slice(-4)}`}
-              </span>
-              <button onClick={handleClearChat} className="text-xs text-[#666] hover:text-[#888] transition-colors">
-                New Chat
-              </button>
-            </div>
-            {/* Chat messages */}
-            <div className="flex-1 overflow-y-auto bg-[#111] border border-t-0 border-b-0 border-[#1a1a1a] p-4 space-y-4">
-              {chatHistory.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${
-                    msg.role === 'user'
-                      ? 'bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20'
-                      : 'bg-[#1a1a1a] text-[#ccc] border border-[#222]'
-                  }`}>
-                    <div className="whitespace-pre-wrap leading-relaxed">{msg.text}</div>
-                  </div>
+              {inputFields.length > 0 ? (
+                <div className="space-y-6">
+                  {inputFields.map(field => (
+                    <div key={field.name}>
+                      <label className="block text-xs uppercase tracking-widest text-text-secondary mb-3">
+                        {field.name} {field.required && <span className="text-accent">*</span>}
+                      </label>
+                      <input type={field.type} value={inputs[field.name] || ''}
+                        onChange={e => setInputs(prev => ({ ...prev, [field.name]: e.target.value }))}
+                        placeholder={`Enter ${field.name}`} required={field.required} className={inputCls}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-              {chatLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-[#1a1a1a] text-[#666] border border-[#222] rounded-xl px-4 py-3 text-sm">
-                    <span className="flex items-center gap-2">
-                      <span className="w-3 h-3 border-2 border-[#333] border-t-[#00d4aa] rounded-full animate-spin" />
-                      Thinking...
-                    </span>
-                  </div>
+              ) : (
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-text-secondary mb-3">Query</label>
+                  <textarea value={inputs._query || ''}
+                    onChange={e => setInputs(prev => ({ ...prev, _query: e.target.value }))}
+                    placeholder="Enter your query..."
+                    rows={3} className={`${inputCls} resize-none`}
+                  />
                 </div>
               )}
-              <div ref={chatBottomRef} />
-            </div>
 
-            {/* Tool activity bar */}
-            {toolActivity.length > 0 && (
-              <div className="bg-[#0a0a0a] border-x border-[#1a1a1a] px-4 py-2">
-                <div className="flex items-center gap-2 text-xs text-[#666]">
-                  <span>Tools: {toolCallCount} calls</span>
-                  <div className="flex flex-wrap gap-1">
-                    {toolActivity.slice(-5).map((a, i) => (
-                      <span key={i} className="bg-[#222] text-[#888] px-1.5 py-0.5 rounded">{a}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+              {error && <div className="mt-6 bg-error/5 border border-error/20 p-4"><p className="text-error text-sm font-bold uppercase tracking-widest">{error}</p></div>}
 
-            {/* Chat input */}
-            <div className="bg-[#111] border border-t-0 border-[#1a1a1a] rounded-b-xl p-4">
-              <div className="flex gap-3">
-                <input
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-                  placeholder="Ask a follow-up question..."
-                  className="flex-1 bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-3 text-white placeholder-[#444] focus:border-[#00d4aa] outline-none text-sm"
-                  disabled={chatLoading}
-                />
-                <button
-                  onClick={() => sendMessage()}
-                  disabled={chatLoading || !chatInput.trim()}
-                  className="bg-[#00d4aa] text-black font-bold px-6 rounded-xl hover:bg-[#00b894] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Send
-                </button>
-                <button
-                  onClick={handleClearChat}
-                  className="text-xs text-[#666] hover:text-[#888] border border-[#333] px-3 rounded-xl transition-colors"
-                  title="Clear chat and start over"
-                >
-                  Clear
-                </button>
-              </div>
-              {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
-              <div className="flex items-center justify-between mt-2 text-xs text-[#555]">
-                <span>
-                  Balance: <span className="text-[#00d4aa]">{balance !== null ? `$${(balance / 1_000_000).toFixed(4)}` : '...'}</span>
-                </span>
-                <span>{chatHistory.filter(m => m.role === 'model').length} responses</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Rating */}
-        {address && chatHistory.length > 0 && (
-          <div className="mt-6 bg-[#111] border border-[#1a1a1a] rounded-xl p-4 flex items-center gap-4">
-            <span className="text-sm text-[#888]">Rate this skill:</span>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map(star => (
-                <button key={star} onClick={() => handleRate(star)}
-                  onMouseEnter={() => setRatingHover(star)} onMouseLeave={() => setRatingHover(0)}
-                  className="text-xl transition-colors">
-                  <span className={(ratingHover || userRating || 0) >= star ? 'text-yellow-400' : 'text-[#333]'}>{'★'}</span>
-                </button>
-              ))}
-            </div>
-            {userRating && <span className="text-xs text-[#666]">Your rating: {userRating}/5</span>}
-            {skill.avg_rating && <span className="text-xs text-[#666]">Avg: {skill.avg_rating.toFixed(1)}</span>}
-          </div>
-        )}
-
-        {/* Recent Executions */}
-        {executions.length > 0 && (
-          <div className="mt-8">
-            <div className="flex items-center gap-4 mb-4">
-              <h2 className="text-lg font-semibold">Recent Executions</h2>
-              <div className="flex gap-2">
-                <button onClick={() => setExecTab('all')}
-                  className={`text-xs px-2.5 py-1 rounded-full transition-colors ${
-                    execTab === 'all' ? 'bg-[#00d4aa]/10 text-[#00d4aa]' : 'text-[#666] hover:text-white'}`}>
-                  All ({executions.length})
-                </button>
-                {address && (
-                  <button onClick={() => setExecTab('mine')}
-                    className={`text-xs px-2.5 py-1 rounded-full transition-colors ${
-                      execTab === 'mine' ? 'bg-[#00d4aa]/10 text-[#00d4aa]' : 'text-[#666] hover:text-white'}`}>
-                    Mine ({executions.filter(e => e.user_wallet.toLowerCase() === address.toLowerCase()).length})
+              {/* Mode toggle */}
+              <div className="mt-8 flex items-center justify-between border-t border-border-subtle pt-6">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setDemoMode(false)}
+                    className={`text-xs px-4 py-2 uppercase tracking-widest border transition-colors ${
+                      !demoMode ? 'bg-accent/5 text-accent border-accent/30' : 'text-text-tertiary border-border-subtle hover:border-border-strong'
+                    }`}>
+                    Wallet Mode
                   </button>
-                )}
+                  <button
+                    onClick={() => setDemoMode(true)}
+                    className={`text-xs px-4 py-2 uppercase tracking-widest border transition-colors ${
+                      demoMode ? 'bg-accent/5 text-accent border-accent/30' : 'text-text-tertiary border-border-subtle hover:border-border-strong'
+                    }`}>
+                    Demo Mode
+                  </button>
+                </div>
+                {!demoMode && !address && <span className="text-xs uppercase tracking-widest text-text-tertiary">Connect wallet to use</span>}
               </div>
-            </div>
-            <div className="space-y-2">
-              {filteredExecutions.slice(0, 10).map(exec => (
-                <div key={exec.id} className="bg-[#111] border border-[#1a1a1a] rounded-lg px-4 py-3 flex items-start gap-4">
-                  <span className={`text-xs px-2 py-0.5 rounded-full mt-0.5 ${
-                    exec.status === 'completed' ? 'bg-green-500/10 text-green-400' :
-                    exec.status === 'failed' ? 'bg-red-500/10 text-red-400' :
-                    'bg-yellow-500/10 text-yellow-400'}`}>
-                    {exec.status}
+
+              <button onClick={handleStartChat}
+                disabled={!demoMode && !address}
+                className="w-full mt-8 bg-text-primary text-surface-elevated font-bold py-4 uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+                {demoMode ? 'Start Conversation (Demo) →' : !address ? 'Connect Wallet First' : 'Start Conversation →'}
+              </button>
+
+              {/* Balance info */}
+              {!demoMode && address && (
+                <div className="mt-6 flex items-center justify-between text-xs uppercase tracking-widest text-text-tertiary border-t border-border-subtle pt-4">
+                  <span>
+                    Platform balance:
+                    <span className="text-accent ml-2 font-mono">
+                      {balance !== null ? `$${(balance / 1_000_000).toFixed(4)}` : '...'}
+                    </span>
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#ccc] truncate">
-                      {exec.output_text || exec.error_message || 'No output'}
-                    </p>
-                    <div className="flex gap-3 text-xs text-[#555] mt-1">
-                      <span>{exec.user_wallet.slice(0, 6)}...{exec.user_wallet.slice(-4)}</span>
-                      <span>{new Date(exec.created_at).toLocaleString()}</span>
-                      {exec.duration_ms && <span>{exec.duration_ms}ms</span>}
-                      {exec.tokens_used && <span>{exec.tokens_used} tokens</span>}
+                  <button onClick={handleDeposit} disabled={depositing}
+                    className="text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50">
+                    {depositing ? 'Depositing...' : '+ Deposit'}
+                  </button>
+                </div>
+              )}
+              {demoMode && (
+                <p className="mt-6 text-xs uppercase tracking-widest text-text-tertiary border-t border-border-subtle pt-4">Demo mode: no wallet or payment required, free to test.</p>
+              )}
+            </div>
+          ) : (
+            /* ── Chat interface ── */
+            <div className="border border-border-subtle bg-surface-elevated flex flex-col h-[calc(100vh-280px)]">
+              {/* Chat header */}
+              <div className="flex items-center justify-between border-b border-border-subtle px-6 pt-4 pb-3">
+                <span className={`text-xs uppercase tracking-widest px-2 py-1 border ${demoMode ? 'bg-warning/10 text-warning border-warning/30' : 'bg-accent/10 text-accent border-accent/30'}`}>
+                  {demoMode ? 'Demo Mode' : `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                </span>
+                <button onClick={handleClearChat} className="text-xs uppercase tracking-widest text-text-tertiary hover:text-text-primary transition-colors">
+                  New Chat
+                </button>
+              </div>
+              {/* Chat messages */}
+              <div className="flex-1 overflow-y-auto bg-background p-6 space-y-4">
+                {chatHistory.map((msg, i) => (
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] px-5 py-3 text-sm border ${
+                      msg.role === 'user'
+                        ? 'bg-accent text-white border-accent'
+                        : 'bg-surface-dim text-text-primary border-border-subtle'
+                    }`}>
+                      <div className="whitespace-pre-wrap leading-relaxed font-sans">{msg.text}</div>
+                    </div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-surface-dim text-text-tertiary border border-border-subtle px-5 py-3 text-sm uppercase tracking-widest">
+                      <span className="flex items-center gap-3">
+                        <span className="w-4 h-4 border-2 border-border-strong border-t-accent animate-spin" />
+                        Thinking...
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div ref={chatBottomRef} />
+              </div>
+
+              {/* Tool activity bar */}
+              {toolActivity.length > 0 && (
+                <div className="bg-surface-dim border-y border-border-subtle px-6 py-3">
+                  <div className="flex items-center gap-4 text-xs uppercase tracking-widest text-text-tertiary">
+                    <span>Tools: {toolCallCount} calls</span>
+                    <div className="flex flex-wrap gap-2">
+                      {toolActivity.slice(-5).map((a, i) => (
+                        <span key={i} className="bg-background border border-border-subtle text-text-secondary px-2 py-1">{a}</span>
+                      ))}
                     </div>
                   </div>
                 </div>
-              ))}
-              {filteredExecutions.length === 0 && (
-                <p className="text-sm text-[#555] py-4 text-center">No executions yet</p>
               )}
+
+              {/* Chat input */}
+              <div className="bg-surface-elevated border-t border-border-subtle p-6">
+                <div className="flex gap-4">
+                  <input
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
+                    placeholder="Ask a follow-up question..."
+                    className="flex-1 bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none text-sm font-sans transition-colors"
+                    disabled={chatLoading}
+                  />
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={chatLoading || !chatInput.trim()}
+                    className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Send
+                  </button>
+                  <button
+                    onClick={handleClearChat}
+                    className="text-xs uppercase tracking-widest text-text-tertiary hover:text-text-primary border border-border-strong px-4 transition-colors"
+                    title="Clear chat and start over"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {error && <div className="mt-3 bg-error/5 border border-error/20 p-2"><p className="text-error text-xs uppercase tracking-widest">{error}</p></div>}
+                <div className="flex items-center justify-between mt-4 text-xs uppercase tracking-widest text-text-tertiary">
+                  <span>
+                    Balance: <span className="text-accent font-mono ml-2">{balance !== null ? `$${(balance / 1_000_000).toFixed(4)}` : '...'}</span>
+                  </span>
+                  <span>{chatHistory.filter(m => m.role === 'model').length} responses</span>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Rating */}
+          {address && chatHistory.length > 0 && (
+            <div className="mt-8 border border-border-subtle bg-surface-elevated p-6 flex items-center gap-6">
+              <span className="text-xs uppercase tracking-widest text-text-secondary">Rate this skill:</span>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button key={star} onClick={() => handleRate(star)}
+                    onMouseEnter={() => setRatingHover(star)} onMouseLeave={() => setRatingHover(0)}
+                    className="text-2xl transition-colors">
+                    <span className={(ratingHover || userRating || 0) >= star ? 'text-accent' : 'text-border-strong'}>{'★'}</span>
+                  </button>
+                ))}
+              </div>
+              {userRating && <span className="text-xs uppercase tracking-widest text-text-tertiary ml-auto">Your rating: {userRating}/5</span>}
+              {!userRating && skill.avg_rating && <span className="text-xs uppercase tracking-widest text-text-tertiary ml-auto">Avg: {skill.avg_rating.toFixed(1)}</span>}
+            </div>
+          )}
+
+          {/* Recent Executions */}
+          {executions.length > 0 && (
+            <div className="mt-16">
+              <div className="flex items-center justify-between mb-6 border-b border-border-subtle pb-4">
+                <h2 className="text-2xl font-display font-bold">Recent Executions</h2>
+                <div className="flex gap-4">
+                  <button onClick={() => setExecTab('all')}
+                    className={`text-xs uppercase tracking-widest px-3 py-1 border transition-colors ${
+                      execTab === 'all' ? 'bg-accent/5 text-accent border-accent/30' : 'text-text-tertiary border-border-subtle hover:text-text-primary hover:border-border-strong'}`}>
+                    All ({executions.length})
+                  </button>
+                  {address && (
+                    <button onClick={() => setExecTab('mine')}
+                      className={`text-xs uppercase tracking-widest px-3 py-1 border transition-colors ${
+                        execTab === 'mine' ? 'bg-accent/5 text-accent border-accent/30' : 'text-text-tertiary border-border-subtle hover:text-text-primary hover:border-border-strong'}`}>
+                      Mine ({executions.filter(e => e.user_wallet.toLowerCase() === address.toLowerCase()).length})
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-4">
+                {filteredExecutions.slice(0, 10).map(exec => (
+                  <div key={exec.id} className="bg-surface-elevated border border-border-subtle p-6 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs uppercase tracking-widest px-2 py-1 border ${
+                        exec.status === 'completed' ? 'bg-success/10 text-success border-success/30' :
+                        exec.status === 'failed' ? 'bg-error/10 text-error border-error/30' :
+                        'bg-warning/10 text-warning border-warning/30'}`}>
+                        {exec.status}
+                      </span>
+                      <div className="flex gap-4 text-xs font-mono text-text-tertiary">
+                        <span>{exec.user_wallet.slice(0, 6)}...{exec.user_wallet.slice(-4)}</span>
+                        <span>{new Date(exec.created_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0 border-t border-border-subtle pt-4">
+                      <p className="text-sm text-text-secondary font-sans line-clamp-3">
+                        {exec.output_text || exec.error_message || 'No output'}
+                      </p>
+                      <div className="flex gap-6 text-xs uppercase tracking-widest text-text-tertiary mt-4">
+                        {exec.duration_ms && <span>Time: {exec.duration_ms}ms</span>}
+                        {exec.tokens_used && <span>Tokens: {exec.tokens_used}</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {filteredExecutions.length === 0 && (
+                  <div className="bg-surface-dim border border-border-subtle p-8 text-center">
+                    <p className="text-sm uppercase tracking-widest text-text-tertiary">No executions yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
