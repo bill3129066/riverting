@@ -12,14 +12,24 @@
     vertical-align: middle;
   }
 
-  /* Sharp corners globally */
   *, *::before, *::after {
     border-radius: 0 !important;
   }
 
-  /* Only exception: full-round pills */
   .rounded-full {
     border-radius: 9999px !important;
+  }
+
+  :focus-visible {
+    outline: 2px solid #4a3bf6;
+    outline-offset: 2px;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+    border-color: #4a3bf6;
   }
 }
 

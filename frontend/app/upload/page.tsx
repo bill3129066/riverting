@@ -297,13 +297,13 @@ export default function UploadSkillPage() {
         <div className="max-w-2xl">
           {/* Mode Toggle */}
           <div className="flex gap-8 mb-12 border-b border-border-subtle">
-            <button onClick={() => setMode('manual')}
+            <button type="button" onClick={() => setMode('manual')}
               className={`pb-3 text-xs uppercase tracking-widest font-bold transition-colors ${
                 mode === 'manual' ? 'text-text-primary border-b-2 border-text-primary' : 'text-text-tertiary hover:text-text-primary'
               }`}>
               Manual Form
             </button>
-            <button onClick={() => setMode('import')}
+            <button type="button" onClick={() => setMode('import')}
               className={`pb-3 text-xs uppercase tracking-widest font-bold transition-colors ${
                 mode === 'import' ? 'text-text-primary border-b-2 border-text-primary' : 'text-text-tertiary hover:text-text-primary'
               }`}>
@@ -316,7 +316,7 @@ export default function UploadSkillPage() {
             <form onSubmit={handleImportSubmit} className="space-y-8">
               {/* SKILL.md */}
               <div>
-                <label className={labelCls}>SKILL.md *</label>
+                <label htmlFor="import-skillmd" className={labelCls}>SKILL.md *</label>
                 <p className="text-xs text-text-tertiary mb-3">
                   Upload or paste a SKILL.md file with frontmatter (--- name / description ---) and markdown body.
                 </p>
@@ -328,6 +328,7 @@ export default function UploadSkillPage() {
                   </label>
                 </div>
                 <textarea
+                  id="import-skillmd"
                   value={skillMdContent}
                   onChange={e => handleSkillMdChange(e.target.value)}
                   rows={8}
@@ -338,7 +339,7 @@ export default function UploadSkillPage() {
 
               {/* Pattern Files */}
               <div>
-                <label className={labelCls}>Pattern Files (optional)</label>
+                <label htmlFor="import-patterns" className={labelCls}>Pattern Files (optional)</label>
                 <p className="text-xs text-text-tertiary mb-3">
                   Upload .md files from the patterns/ directory. Each becomes a separate sub-skill.
                 </p>
@@ -349,7 +350,7 @@ export default function UploadSkillPage() {
                 {patternFiles.length > 0 && (
                   <div className="space-y-2 mt-4">
                     {patternFiles.map((p, i) => (
-                      <div key={i} className="flex items-center gap-3 bg-surface-dim border border-border-subtle px-4 py-3">
+                      <div key={`pattern-${p.name}`} className="flex items-center gap-3 bg-surface-dim border border-border-subtle px-4 py-3">
                         <span className="text-sm text-text-primary flex-1 font-mono">{p.name}.md</span>
                         <span className="text-xs text-text-tertiary">{(p.content.length / 1024).toFixed(1)}KB</span>
                         <button type="button" onClick={() => removePattern(i)}
@@ -391,8 +392,8 @@ export default function UploadSkillPage() {
               {/* Category + Price */}
               <div className="grid grid-cols-2 gap-8">
                 <div>
-                  <label className={labelCls}>Category</label>
-                  <select value={importCategory} onChange={e => setImportCategory(e.target.value)} className={`${inputCls} appearance-none`}>
+                  <label htmlFor="import-category" className={labelCls}>Category</label>
+                  <select id="import-category" value={importCategory} onChange={e => setImportCategory(e.target.value)} className={`${inputCls} appearance-none`}>
                     <option value="general">General</option>
                     <option value="defi">DeFi</option>
                     <option value="trading">Trading</option>
@@ -402,8 +403,8 @@ export default function UploadSkillPage() {
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>Price per Run (micro-USDC)</label>
-                  <input type="number" value={importPrice} onChange={e => setImportPrice(e.target.value)}
+                  <label htmlFor="import-price" className={labelCls}>Price per Run (micro-USDC)</label>
+                  <input id="import-price" type="number" value={importPrice} onChange={e => setImportPrice(e.target.value)}
                     min="0" step="1000" className={inputCls} />
                 </div>
               </div>
@@ -469,10 +470,10 @@ export default function UploadSkillPage() {
               </div>
 
               <div>
-                <label className={labelCls}>Input Fields</label>
+                <span className={labelCls}>Input Fields</span>
                 <div className="space-y-3">
                   {inputFields.map((field, i) => (
-                    <div key={i} className="flex gap-3 items-center">
+                    <div key={`field-${field.name || i}`} className="flex gap-3 items-center">
                       <input value={field.name} onChange={e => updateField(i, 'name', e.target.value)}
                         placeholder="field name"
                         className="flex-1 bg-surface-dim border border-border-subtle px-3 py-2 text-text-primary text-sm font-mono placeholder:text-text-tertiary focus:border-accent outline-none transition-colors" />

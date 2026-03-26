@@ -66,8 +66,8 @@ export default function NewAgentPage() {
 
   return (
     <div className="bg-background min-h-screen text-text-primary">
-      <div className="max-w-[1920px] mx-auto px-24 pt-24 pb-32">
-        <h1 className="font-display font-bold text-[5rem] leading-[0.95] tracking-tight mb-6">Upload New Agent</h1>
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
+        <h1 className="font-display font-bold text-4xl sm:text-5xl lg:text-[5rem] leading-[0.95] tracking-tight mb-6">Upload New Agent</h1>
         <p className="text-text-secondary text-lg mb-16 max-w-2xl">Define your AI agent's capabilities and pricing to publish to the network.</p>
 
         <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl">
@@ -94,7 +94,7 @@ export default function NewAgentPage() {
           </div>
 
           {/* Category + Template */}
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
             <div>
               <label htmlFor="agent-category" className="block text-xs text-text-secondary uppercase tracking-widest mb-2">Category</label>
               <select id="agent-category" value={form.category} onChange={update('category')}

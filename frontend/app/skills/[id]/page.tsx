@@ -136,7 +136,7 @@ export default function SkillDetailPage() {
   }
 
   const handleDelete = async () => {
-    if (!address || !confirm('Are you sure you want to delete this skill?')) return
+    if (!address || !confirm('Are you sure you want to delete this skill? This action cannot be undone.')) return
     try {
       const auth = await signAction(signMessageAsync, address, 'delete-skill', id)
       await deleteSkill(id, auth)
@@ -234,7 +234,7 @@ export default function SkillDetailPage() {
               By {skill.creator_wallet.slice(0, 6)}...{skill.creator_wallet.slice(-4)} · {skill.model} · {formatPrice(skill.price_per_run)}/msg
             </p>
             {isOwner && (
-              <button onClick={handleDelete}
+              <button type="button" onClick={handleDelete}
                 className="text-error hover:opacity-80 border border-error/30 px-3 py-1 transition-colors">
                 Delete Skill
               </button>
@@ -254,10 +254,10 @@ export default function SkillDetailPage() {
                 <div className="space-y-6">
                   {inputFields.map(field => (
                     <div key={field.name}>
-                      <label className="block text-xs uppercase tracking-widest text-text-secondary mb-3">
+                      <label htmlFor={`input-${field.name}`} className="block text-xs uppercase tracking-widest text-text-secondary mb-3">
                         {field.name} {field.required && <span className="text-accent">*</span>}
                       </label>
-                      <input type={field.type} value={inputs[field.name] || ''}
+                      <input id={`input-${field.name}`} type={field.type} value={inputs[field.name] || ''}
                         onChange={e => setInputs(prev => ({ ...prev, [field.name]: e.target.value }))}
                         placeholder={`Enter ${field.name}`} required={field.required} className={inputCls}
                       />
@@ -266,8 +266,8 @@ export default function SkillDetailPage() {
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-text-secondary mb-3">Query</label>
-                  <textarea value={inputs._query || ''}
+                  <label htmlFor="input-query" className="block text-xs uppercase tracking-widest text-text-secondary mb-3">Query</label>
+                  <textarea id="input-query" value={inputs._query || ''}
                     onChange={e => setInputs(prev => ({ ...prev, _query: e.target.value }))}
                     placeholder="Enter your query..."
                     rows={3} className={`${inputCls} resize-none`}
@@ -281,6 +281,7 @@ export default function SkillDetailPage() {
               <div className="mt-8 flex items-center justify-between border-t border-border-subtle pt-6">
                 <div className="flex items-center gap-4">
                   <button
+                    type="button"
                     onClick={() => setDemoMode(false)}
                     className={`text-xs px-4 py-2 uppercase tracking-widest border transition-colors ${
                       !demoMode ? 'bg-accent/5 text-accent border-accent/30' : 'text-text-tertiary border-border-subtle hover:border-border-strong'
@@ -288,6 +289,7 @@ export default function SkillDetailPage() {
                     Wallet Mode
                   </button>
                   <button
+                    type="button"
                     onClick={() => setDemoMode(true)}
                     className={`text-xs px-4 py-2 uppercase tracking-widest border transition-colors ${
                       demoMode ? 'bg-accent/5 text-accent border-accent/30' : 'text-text-tertiary border-border-subtle hover:border-border-strong'
@@ -298,7 +300,7 @@ export default function SkillDetailPage() {
                 {!demoMode && !address && <span className="text-xs uppercase tracking-widest text-text-tertiary">Connect wallet to use</span>}
               </div>
 
-              <button onClick={handleStartChat}
+              <button type="button" onClick={handleStartChat}
                 disabled={!demoMode && !address}
                 className="w-full mt-8 bg-text-primary text-surface-elevated font-bold py-4 uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
                 {demoMode ? 'Start Conversation (Demo) →' : !address ? 'Connect Wallet First' : 'Start Conversation →'}
@@ -313,7 +315,7 @@ export default function SkillDetailPage() {
                       {balance !== null ? `$${(balance / 1_000_000).toFixed(4)}` : '...'}
                     </span>
                   </span>
-                  <button onClick={handleDeposit} disabled={depositing}
+                  <button type="button" onClick={handleDeposit} disabled={depositing}
                     className="text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50">
                     {depositing ? 'Depositing...' : '+ Deposit'}
                   </button>
@@ -331,14 +333,14 @@ export default function SkillDetailPage() {
                 <span className={`text-xs uppercase tracking-widest px-2 py-1 border ${demoMode ? 'bg-warning/10 text-warning border-warning/30' : 'bg-accent/10 text-accent border-accent/30'}`}>
                   {demoMode ? 'Demo Mode' : `${address?.slice(0, 6)}...${address?.slice(-4)}`}
                 </span>
-                <button onClick={handleClearChat} className="text-xs uppercase tracking-widest text-text-tertiary hover:text-text-primary transition-colors">
+                <button type="button" onClick={handleClearChat} className="text-xs uppercase tracking-widest text-text-tertiary hover:text-text-primary transition-colors">
                   New Chat
                 </button>
               </div>
               {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto bg-background p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto bg-background p-6 space-y-4" role="log" aria-live="polite">
                 {chatHistory.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div key={`msg-${i}-${msg.role}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[80%] px-5 py-3 text-sm border ${
                       msg.role === 'user'
                         ? 'bg-accent text-white border-accent'
@@ -350,7 +352,7 @@ export default function SkillDetailPage() {
                 ))}
                 {chatLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-surface-dim text-text-tertiary border border-border-subtle px-5 py-3 text-sm uppercase tracking-widest">
+                    <div role="status" aria-label="Loading response" className="bg-surface-dim text-text-tertiary border border-border-subtle px-5 py-3 text-sm uppercase tracking-widest">
                       <span className="flex items-center gap-3">
                         <span className="w-4 h-4 border-2 border-border-strong border-t-accent animate-spin" />
                         Thinking...

@@ -23,10 +23,10 @@ export default function CuratorPage() {
 
   return (
     <div className="bg-background min-h-screen text-text-primary">
-      <div className="max-w-[1920px] mx-auto px-24 pt-24 pb-32">
-        <div className="flex justify-between items-end mb-24">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-24">
           <div>
-            <h1 className="font-display font-bold text-[5rem] leading-[0.95] tracking-tight mb-6">
+            <h1 className="font-display font-bold text-4xl sm:text-5xl lg:text-[5rem] leading-[0.95] tracking-tight mb-6">
               Curator Dashboard
             </h1>
             <div className="flex items-center gap-3">
@@ -55,14 +55,14 @@ export default function CuratorPage() {
         </div>
 
         {/* Earnings summary */}
-        <div className="grid grid-cols-3 gap-0 border border-border-subtle mb-32">
-          <div className="p-12 bg-surface border-r border-border-subtle">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-border-subtle mb-32">
+          <div className="p-12 bg-surface border-b md:border-b-0 md:border-r border-border-subtle">
             <p className="text-text-secondary text-xs uppercase tracking-widest mb-4">Total Earned</p>
             <p className="font-display text-6xl text-text-primary">
               <span className="italic mr-1 text-text-tertiary">$</span>{totalEarned.toFixed(4)}
             </p>
           </div>
-          <div className="p-12 bg-surface border-r border-border-subtle">
+          <div className="p-12 bg-surface border-b md:border-b-0 md:border-r border-border-subtle">
             <p className="text-text-secondary text-xs uppercase tracking-widest mb-4">Active Agents</p>
             <p className="font-display text-6xl text-accent">
               {agents.filter(a => a.active).length}
@@ -77,14 +77,14 @@ export default function CuratorPage() {
         </div>
 
         {/* Agent list */}
-        <div className="grid grid-cols-12 gap-24">
-          <div className="col-span-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-24">
+          <div className="lg:col-span-3">
             <h2 className="font-display text-2xl border-b border-border-strong pb-4 mb-4">My Agents</h2>
             <p className="text-text-secondary text-sm leading-relaxed">
               Manage your published agents. You earn the curator rate for every second users engage with them.
             </p>
           </div>
-          <div className="col-span-9">
+          <div className="lg:col-span-9">
             {loading ? (
               <div className="space-y-8 border-t border-border-subtle">
                 {[1, 2].map((i) => (

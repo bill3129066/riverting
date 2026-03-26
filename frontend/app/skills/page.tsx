@@ -85,13 +85,13 @@ export default function SkillsPage() {
 
         {/* Tabs: All / My Skills */}
         <div className="flex gap-8 mb-12 border-b border-border-subtle">
-          <button onClick={() => setTab('all')}
+          <button type="button" onClick={() => setTab('all')}
             className={`pb-3 text-xs uppercase tracking-widest font-bold transition-colors ${
               tab === 'all' ? 'text-text-primary border-b-2 border-text-primary' : 'text-text-tertiary hover:text-text-primary'
             }`}>
             All Skills
           </button>
-          <button onClick={() => setTab('mine')}
+          <button type="button" onClick={() => setTab('mine')}
             className={`pb-3 text-xs uppercase tracking-widest font-bold transition-colors ${
               tab === 'mine' ? 'text-text-primary border-b-2 border-text-primary' : 'text-text-tertiary hover:text-text-primary'
             }`}>
@@ -123,7 +123,7 @@ export default function SkillsPage() {
             {/* Category Filter */}
             <div className="flex gap-8 mb-16 flex-wrap">
               {CATEGORIES.map(cat => (
-                <button key={cat} onClick={() => setCategory(cat)}
+                <button type="button" key={cat} onClick={() => setCategory(cat)}
                   className={`text-xs uppercase tracking-widest border-b pb-1 transition-colors ${
                     category === cat
                       ? 'border-text-primary text-text-primary font-bold'
@@ -219,7 +219,7 @@ export default function SkillsPage() {
 
                     <div className="flex justify-between items-center mt-6">
                       {isOwner ? (
-                        <button onClick={() => handleDelete(skill.id)}
+                        <button type="button" onClick={() => handleDelete(skill.id)}
                           className="text-xs text-text-tertiary hover:text-error transition-colors uppercase tracking-widest">
                           Delete
                         </button>

@@ -3,10 +3,10 @@ import Link from 'next/link'
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background text-text-primary">
-      <section className="mx-auto max-w-[1920px] px-24 py-48">
-        <div className="grid grid-cols-12 gap-24">
-          <div className="col-span-8">
-            <h1 className="font-display text-[7rem] font-bold leading-[0.9] tracking-tight mb-12">
+      <section className="mx-auto max-w-[1920px] px-4 sm:px-8 lg:px-24 py-48">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-24">
+          <div className="lg:col-span-8">
+            <h1 className="font-display text-4xl sm:text-6xl lg:text-[7rem] font-bold leading-[0.9] tracking-tight mb-12">
               AI Agents.
               <br />
               <span className="italic font-normal">Streaming value.</span>
@@ -16,7 +16,7 @@ export default function HomePage() {
               The marketplace where AI labor is metered, verified, and settled on-chain.
             </p>
           </div>
-          <div className="col-span-4 flex flex-col justify-end items-start gap-8">
+          <div className="lg:col-span-4 flex flex-col justify-end items-start gap-8">
             <Link 
               href="/marketplace"
               className="group flex items-center gap-4 border-b border-text-primary pb-2 text-xl font-medium transition-colors hover:text-accent hover:border-accent"
@@ -35,8 +35,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1920px] px-24 pb-48">
-        <div className="grid grid-cols-12 gap-24">
+      <section className="mx-auto max-w-[1920px] px-4 sm:px-8 lg:px-24 pb-48">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-24">
           {[
             {
               role: 'Agent Curator',
@@ -63,7 +63,7 @@ export default function HomePage() {
               statValue: 'Pay-as-you-go',
             },
           ].map(card => (
-            <div key={card.role} className="col-span-4 flex flex-col">
+            <div key={card.role} className="col-span-12 md:col-span-4 flex flex-col">
               <h3 className="font-display text-4xl font-bold italic mb-8">{card.role}</h3>
               <div className="h-px w-12 bg-text-primary mb-8"></div>
               <div className="flex-grow flex flex-col">
@@ -88,8 +88,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1920px] px-24 pb-48">
-        <div className="grid grid-cols-4 border border-border-subtle divide-x divide-border-subtle">
+      <section className="mx-auto max-w-[1920px] px-4 sm:px-8 lg:px-24 pb-48">
+        <div className="grid grid-cols-2 md:grid-cols-4 border border-border-subtle divide-y md:divide-y-0 md:divide-x divide-border-subtle">
           {[
             { label: 'Proof Interval', value: '3-5s', subtitle: 'On-chain heartbeat' },
             { label: 'Minimum', value: '$0.001', subtitle: 'Per query' },
