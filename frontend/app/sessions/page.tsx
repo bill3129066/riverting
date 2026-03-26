@@ -25,11 +25,12 @@ function formatDuration(createdAt: string, endedAt: string | null) {
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchSessions()
       .then(setSessions)
-      .catch(console.error)
+      .catch((e: any) => setError(e.message || 'Failed to fetch sessions'))
       .finally(() => setLoading(false))
   }, [])
 
@@ -54,6 +55,13 @@ export default function SessionsPage() {
             <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-1">arrow_forward</span>
           </Link>
         </div>
+
+        {error && (
+          <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mb-8">
+            <p className="text-error text-sm">{error}</p>
+            <button type="button" onClick={() => setError(null)} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
+          </div>
+        )}
 
         {loading ? (
           <div className="space-y-8 border-t border-border-subtle">

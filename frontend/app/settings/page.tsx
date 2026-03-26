@@ -48,6 +48,7 @@ export default function SettingsPage() {
   const [depositing, setDepositing] = useState(false)
   const [depositSuccess, setDepositSuccess] = useState(false)
   const [platformBalance, setPlatformBalance] = useState<{ balance: number; total_deposited: number; total_spent: number } | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setDisplayName(localStorage.getItem('riverting_display_name') || '')
@@ -55,7 +56,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!address) return
-    fetchBalance(address).then(setPlatformBalance).catch(() => {})
+    fetchBalance(address).then(setPlatformBalance).catch((e: any) => setError(e.message || 'Failed to fetch balance'))
   }, [address])
 
   const { data: balance, refetch: refetchBalance } = useReadContract({
@@ -112,7 +113,7 @@ export default function SettingsPage() {
       setDepositSuccess(true)
       setTimeout(() => setDepositSuccess(false), 3000)
     } catch (e: any) {
-      alert(e.message)
+      setError(e.message)
     } finally {
       setDepositing(false)
     }
@@ -140,8 +141,15 @@ export default function SettingsPage() {
         <div className="max-w-2xl mx-auto space-y-16">
           <div>
             <h1 className="font-display font-bold text-[5rem] leading-[0.95] tracking-tight mb-6">Settings</h1>
-            <p className="text-text-secondary text-lg">Account & balance management</p>
+            <p className="text-text-secondary text-lg mb-8">Account & balance management</p>
           </div>
+
+          {error && (
+            <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mb-8">
+              <p className="text-error text-sm">{error}</p>
+              <button type="button" onClick={() => setError(null)} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
+            </div>
+          )}
 
           {isConnected && (
             <section className="border border-border-subtle">

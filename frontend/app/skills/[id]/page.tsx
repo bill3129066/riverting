@@ -53,9 +53,10 @@ export default function SkillDetailPage() {
   const [skill, setSkill] = useState<Skill | null>(null)
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const [balance, setBalance] = useState<number | null>(null)
   const [depositing, setDepositing] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [userRating, setUserRating] = useState<number | null>(null)
   const [ratingHover, setRatingHover] = useState(0)
   const [executions, setExecutions] = useState<Execution[]>([])
@@ -72,7 +73,7 @@ export default function SkillDetailPage() {
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetchSkill(id).then(setSkill).catch(console.error).finally(() => setLoading(false))
+    fetchSkill(id).then(setSkill).catch(e => setError(e.message)).finally(() => setLoading(false))
     fetchSkillExecutions(id, address?.toLowerCase()).then(setExecutions).catch(() => {})
   }, [id, address])
 
@@ -97,7 +98,7 @@ export default function SkillDetailPage() {
         setChatHistory(parsed)
         if (parsed.length > 0) setChatStarted(true)
       }
-    } catch {}
+    } catch { /* localStorage parse error */ }
   }, [id])
 
   // Save chat to localStorage
@@ -121,7 +122,7 @@ export default function SkillDetailPage() {
       const result = await rateSkillApi(id, rating, auth)
       setUserRating(rating)
       if (skill) setSkill({ ...skill, avg_rating: result.avg_rating })
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { setError(e.message) }
   }
 
   const handleDeposit = async () => {
@@ -131,17 +132,20 @@ export default function SkillDetailPage() {
       const auth = await signAction(signMessageAsync, address, 'deposit')
       const result = await depositFunds(5_000_000, auth)
       setBalance(result.balance)
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { setError(e.message) }
     finally { setDepositing(false) }
   }
 
-  const handleDelete = async () => {
-    if (!address || !confirm('Are you sure you want to delete this skill? This action cannot be undone.')) return
+  const confirmDelete = async () => {
+    if (!address) return
     try {
       const auth = await signAction(signMessageAsync, address, 'delete-skill', id)
       await deleteSkill(id, auth)
       router.push('/skills')
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) {
+      setError(e.message)
+      setIsDeleting(false)
+    }
   }
 
   const handleClearChat = () => {
@@ -161,7 +165,7 @@ export default function SkillDetailPage() {
     const userMsg: ChatMsg = { role: 'user', text }
     setChatHistory(prev => [...prev, userMsg])
     setChatLoading(true)
-    setError('')
+    setError(null)
 
     try {
       // Use signed auth if wallet connected and not in demo mode
@@ -234,13 +238,28 @@ export default function SkillDetailPage() {
               By {skill.creator_wallet.slice(0, 6)}...{skill.creator_wallet.slice(-4)} · {skill.model} · {formatPrice(skill.price_per_run)}/msg
             </p>
             {isOwner && (
-              <button type="button" onClick={handleDelete}
-                className="text-error hover:opacity-80 border border-error/30 px-3 py-1 transition-colors">
-                Delete Skill
-              </button>
+              isDeleting ? (
+                <div className="flex items-center gap-4 text-xs">
+                  <span className="text-text-secondary">Delete this skill?</span>
+                  <button type="button" onClick={confirmDelete} className="text-error font-bold uppercase tracking-widest">Confirm</button>
+                  <button type="button" onClick={() => setIsDeleting(false)} className="text-text-tertiary uppercase tracking-widest">Cancel</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setIsDeleting(true)}
+                  className="text-error hover:opacity-80 border border-error/30 px-3 py-1 transition-colors">
+                  Delete Skill
+                </button>
+              )
             )}
           </div>
         </div>
+
+        {error && (
+          <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mb-8">
+            <p className="text-error text-sm">{error}</p>
+            <button type="button" onClick={() => setError(null)} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
+          </div>
+        )}
 
         <div className="max-w-3xl mx-auto">
           {/* Main area */}
@@ -275,7 +294,7 @@ export default function SkillDetailPage() {
                 </div>
               )}
 
-              {error && <div className="mt-6 bg-error/5 border border-error/20 p-4"><p className="text-error text-sm font-bold uppercase tracking-widest">{error}</p></div>}
+
 
               {/* Mode toggle */}
               <div className="mt-8 flex items-center justify-between border-t border-border-subtle pt-6">
@@ -403,7 +422,7 @@ export default function SkillDetailPage() {
                     Clear
                   </button>
                 </div>
-                {error && <div className="mt-3 bg-error/5 border border-error/20 p-2"><p className="text-error text-xs uppercase tracking-widest">{error}</p></div>}
+
                 <div className="flex items-center justify-between mt-4 text-xs uppercase tracking-widest text-text-tertiary">
                   <span>
                     Balance: <span className="text-accent font-mono ml-2">{balance !== null ? `$${(balance / 1_000_000).toFixed(4)}` : '...'}</span>

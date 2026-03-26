@@ -9,13 +9,14 @@ export default function CuratorPage() {
   const { address } = useAccount()
   const [agents, setAgents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAgents()
       .then(all => setAgents(all.filter((a: any) =>
         !address || a.curator_wallet.toLowerCase() === address.toLowerCase()
       )))
-      .catch(console.error)
+      .catch((e: any) => setError(e.message || 'Failed to fetch agents'))
       .finally(() => setLoading(false))
   }, [address])
 
@@ -53,6 +54,13 @@ export default function CuratorPage() {
             Upload Agent
           </Link>
         </div>
+
+        {error && (
+          <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mb-8">
+            <p className="text-error text-sm">{error}</p>
+            <button type="button" onClick={() => setError(null)} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
+          </div>
+        )}
 
         {/* Earnings summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-border-subtle mb-32">
