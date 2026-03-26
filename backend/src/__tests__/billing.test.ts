@@ -13,7 +13,7 @@ import {
 } from '../services/session/billingService.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const schemaSql = readFileSync(resolve(__dirname, '../db/schema-v2.sql'), 'utf-8')
+const schemaSql = readFileSync(resolve(__dirname, '../db/schema.sql'), 'utf-8')
 
 describe('billingService', () => {
   beforeAll(() => {

@@ -5,9 +5,9 @@ import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const schemaSql = readFileSync(resolve(__dirname, '../db/schema-v2.sql'), 'utf-8')
+const schemaSql = readFileSync(resolve(__dirname, '../db/schema.sql'), 'utf-8')
 
-describe('schema-v2.sql', () => {
+describe('schema.sql', () => {
   let db: InstanceType<typeof Database>
 
   beforeAll(() => {

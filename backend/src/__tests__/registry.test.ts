@@ -14,7 +14,7 @@ import {
 } from '../services/agent/agentRegistry.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const schemaSql = readFileSync(resolve(__dirname, '../db/schema-v2.sql'), 'utf-8')
+const schemaSql = readFileSync(resolve(__dirname, '../db/schema.sql'), 'utf-8')
 
 describe('agentRegistry', () => {
   beforeAll(() => {
