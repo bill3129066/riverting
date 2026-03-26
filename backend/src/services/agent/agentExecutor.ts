@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import { GoogleGenerativeAI, FunctionCallingMode, type FunctionResponsePart } from '@google/generative-ai'
 import { getAgentById, incrementRunCount } from './agentRegistry.js'
 import { geminiQueue } from '../skill/requestQueue.js'
-import { charge, getBalance } from '../skill/billing.js'
+import { accrueCharge, getBalance } from '../session/billingService.js'
 import { getToolDeclarations } from '../skill/toolDeclarations.js'
 import { executeRpcTool } from '../skill/toolExecutor.js'
 import { TOOL_USE_SYSTEM_PROMPT, buildToolUsePrompt } from '../skill/promptBuilder.js'
@@ -187,8 +187,6 @@ export async function runAgentOnce(
     `).run({ $id: executionId, $output: output, $durationMs: durationMs, $tokensUsed: tokensUsed, $amountCharged: (agent as any).price_per_run })
 
     incrementRunCount(agentId)
-    if ((agent as any).price_per_run > 0) charge(userWallet, (agent as any).price_per_run)
-
     onStepEmit?.({ kind: 'finding', title: 'Complete', body: output.slice(0, 200), ts: new Date().toISOString() })
 
     return { executionId, output, durationMs, tokensUsed, toolCallCount, status: 'completed' }
@@ -341,8 +339,6 @@ export function runAgentStream(
         `).run({ $id: executionId, $output: fullOutput, $durationMs: durationMs, $tokensUsed: tokensUsed, $amountCharged: (agent as any).price_per_run })
 
         incrementRunCount(agentId)
-        if ((agent as any).price_per_run > 0) charge(userWallet, (agent as any).price_per_run)
-
         onStepEmit?.({ kind: 'finding', title: 'Complete', body: fullOutput.slice(0, 200), ts: new Date().toISOString() })
 
         send('complete', { executionId, durationMs, tokensUsed, toolCallCount, status: 'completed' })
