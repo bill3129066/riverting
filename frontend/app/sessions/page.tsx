@@ -89,7 +89,7 @@ export default function SessionsPage() {
             {sessions.map((s) => (
               <Link
                 key={s.id}
-                href={`/session/${s.id}`}
+                href={`/sessions/${s.id}`}
                 className="group flex flex-col md:flex-row justify-between items-start md:items-center gap-4 py-8 border-b border-border-subtle hover:bg-surface-dim transition-colors px-4 md:px-8"
               >
                 <div className="space-y-2">

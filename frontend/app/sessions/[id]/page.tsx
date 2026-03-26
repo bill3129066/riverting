@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAccount, useSignMessage } from 'wagmi'
 import { signAction } from '@/lib/sign-action'
-import { chatInSession, stopSession } from '@/lib/agents-api'
+import { chatInSession, stopSession, rateAgent } from '@/lib/agents-api'
 
 import SalaryTicker from '@/components/session/SalaryTicker'
 import ProofHeartbeatTimeline from '@/components/session/ProofHeartbeatTimeline'
@@ -60,6 +60,12 @@ export default function SessionPage() {
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const [isActionLoading, setIsActionLoading] = useState(false)
+  const [showReview, setShowReview] = useState(false)
+  const [agentId, setAgentId] = useState<string | null>(null)
+  const [reviewRating, setReviewRating] = useState(0)
+  const [ratingHover, setRatingHover] = useState(0)
+  const [ratingSubmitted, setRatingSubmitted] = useState(false)
+  const sessionStartRef = useRef(Date.now())
   
   const [toolCallCount, setToolCallCount] = useState(0)
   interface ToolActivityItem {
@@ -86,6 +92,13 @@ export default function SessionPage() {
         if (session.total_rate) setRatePerSec(session.total_rate)
         if (session.curator_rate) setCuratorRate(session.curator_rate)
         if (session.platform_fee) setPlatformFee(session.platform_fee)
+        if (session.agent_id) setAgentId(session.agent_id)
+        if (session.status && ['active', 'paused', 'stopped'].includes(session.status)) {
+          setStatus(session.status)
+        }
+        if (session.started_at) {
+          sessionStartRef.current = new Date(session.started_at).getTime()
+        }
       })
       .catch(() => {})
   }, [isValidSession, id, router])
@@ -202,17 +215,37 @@ export default function SessionPage() {
 
   const handleStop = async () => {
     if (!address) return
-    if (!confirm('Are you sure you want to completely stop this session?')) return
     setIsActionLoading(true)
     try {
       const auth = await signAction(signMessageAsync, address, 'stop-session', id)
       await stopSession(id, auth)
       setStatus('stopped')
       eventSourceRef.current?.close()
+      setShowReview(true)
     } catch (e: any) {
       alert(`Failed to stop: ${e.message}`)
     } finally {
       setIsActionLoading(false)
+    }
+  }
+
+  const sessionDuration = () => {
+    const secs = Math.floor((Date.now() - sessionStartRef.current) / 1000)
+    const m = Math.floor(secs / 60)
+    const s = secs % 60
+    if (m === 0) return `${s}s`
+    return `${m}m ${s}s`
+  }
+
+  const handleRateAgent = async (stars: number) => {
+    if (!address || !agentId) return
+    setReviewRating(stars)
+    try {
+      const auth = await signAction(signMessageAsync, address, 'rate-agent', agentId)
+      await rateAgent(agentId, stars, auth)
+      setRatingSubmitted(true)
+    } catch {
+      setReviewRating(0)
     }
   }
 
@@ -265,15 +298,7 @@ export default function SessionPage() {
           <h1 className="text-[3rem] font-display italic leading-none mb-2">Live Session</h1>
           <p className="text-text-secondary text-lg font-mono">#{id}</p>
         </div>
-        <div className="flex flex-col items-end gap-3 mb-2">
-          <StreamStatusBadge status={status} />
-          
-          <div className="flex gap-2">
-            {status !== 'stopped' && (
-              <button type="button" onClick={handleStop} disabled={!address || isActionLoading} className="px-3 py-1 text-xs border border-red-900/50 text-red-500 hover:bg-red-900/20 transition-colors disabled:opacity-50">Stop</button>
-            )}
-          </div>
-        </div>
+        <StreamStatusBadge status={status} />
       </div>
 
       <MagiConsensusEngine />
@@ -345,18 +370,28 @@ export default function SessionPage() {
         )}
         
         <div className="flex gap-4 p-6 border-t border-border-subtle bg-surface">
+          {status !== 'stopped' && (
+            <button
+              type="button"
+              onClick={handleStop}
+              disabled={!address || isActionLoading}
+              className="px-6 py-4 text-xs uppercase tracking-widest font-bold border border-red-900/50 text-red-500 hover:bg-red-900/10 transition-colors disabled:opacity-50"
+            >
+              {isActionLoading ? 'Stopping...' : 'End Session'}
+            </button>
+          )}
           <input
             value={chatInput}
             onChange={e => setChatInput(e.target.value)}
             onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) sendMessage() }}
-            placeholder="Ask the agent..."
-            disabled={chatLoading}
+            placeholder={status === 'stopped' ? 'Session ended' : 'Ask the agent...'}
+            disabled={chatLoading || status === 'stopped'}
             className="flex-1 bg-surface-elevated border border-border-subtle px-6 py-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none disabled:opacity-50 transition-colors"
           />
           <button
             type="button"
             onClick={sendMessage}
-            disabled={chatLoading || !chatInput.trim()}
+            disabled={chatLoading || !chatInput.trim() || status === 'stopped'}
             className="bg-text-primary text-surface-elevated font-bold px-8 py-4 text-xs uppercase tracking-widest transition-colors hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Send
@@ -364,23 +399,113 @@ export default function SessionPage() {
         </div>
       </div>
 
-      {status === 'stopped' && (
-        <div className="mt-16 border border-border-subtle bg-surface-elevated">
-          <div className="border-b border-border-subtle p-6 bg-surface-dim">
-            <h3 className="font-display font-bold text-2xl text-text-primary">Final Settlement</h3>
-          </div>
-          <div className="grid grid-cols-3 divide-x divide-border-subtle text-center">
-            <div className="p-12">
-              <div className="text-4xl font-display font-bold text-accent mb-2">${(accrued / 1_000_000).toFixed(4)}</div>
-              <div className="text-text-secondary uppercase tracking-widest text-xs">Total Charged</div>
+      {showReview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-surface-elevated border border-border-strong w-full max-w-2xl mx-4 shadow-2xl shadow-black/10">
+            <div className="border-b border-border-subtle p-8 bg-surface-dim flex items-center justify-between">
+              <div>
+                <h3 className="font-display font-bold text-3xl text-text-primary italic">Session Complete</h3>
+                <p className="text-text-tertiary text-xs font-mono mt-2">#{id?.slice(0, 8)}</p>
+              </div>
+              <span className="text-xs uppercase tracking-widest font-bold px-3 py-1 border border-border-strong text-text-tertiary">Settled</span>
             </div>
-            <div className="p-12">
-              <div className="text-4xl font-display font-bold text-text-primary mb-2">${(ratePerSec > 0 ? accrued * curatorRate / ratePerSec / 1_000_000 : 0).toFixed(4)}</div>
-              <div className="text-text-secondary uppercase tracking-widest text-xs">Curator Payout</div>
+
+            <div className="grid grid-cols-3 divide-x divide-border-subtle text-center border-b border-border-subtle">
+              <div className="p-8">
+                <div className="text-3xl font-display font-bold text-accent mb-1">${(accrued / 1_000_000).toFixed(4)}</div>
+                <div className="text-text-tertiary uppercase tracking-widest text-[10px] font-bold">Total Cost</div>
+              </div>
+              <div className="p-8">
+                <div className="text-3xl font-display font-bold text-text-primary mb-1">{sessionDuration()}</div>
+                <div className="text-text-tertiary uppercase tracking-widest text-[10px] font-bold">Duration</div>
+              </div>
+              <div className="p-8">
+                <div className="text-3xl font-display font-bold text-text-primary mb-1">{proofs.length}</div>
+                <div className="text-text-tertiary uppercase tracking-widest text-[10px] font-bold">Proofs</div>
+              </div>
             </div>
-            <div className="p-12">
-              <div className="text-4xl font-display font-bold text-text-primary mb-2">${(ratePerSec > 0 ? accrued * platformFee / ratePerSec / 1_000_000 : 0).toFixed(4)}</div>
-              <div className="text-text-secondary uppercase tracking-widest text-xs">Platform Fee</div>
+
+            <div className="p-8 border-b border-border-subtle">
+              <p className="text-xs uppercase tracking-widest font-bold text-text-tertiary mb-4">Settlement Breakdown</p>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">Curator Payout</span>
+                  <span className="text-text-primary font-bold">${(ratePerSec > 0 ? accrued * curatorRate / ratePerSec / 1_000_000 : 0).toFixed(4)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">Platform Fee</span>
+                  <span className="text-text-primary font-bold">${(ratePerSec > 0 ? accrued * platformFee / ratePerSec / 1_000_000 : 0).toFixed(4)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 border-b border-border-subtle">
+              <p className="text-xs uppercase tracking-widest font-bold text-text-tertiary mb-4">Session Activity</p>
+              <div className="grid grid-cols-3 gap-6 text-sm">
+                <div>
+                  <span className="text-2xl font-display font-bold text-text-primary">{chatHistory.filter(m => m.role === 'user').length}</span>
+                  <span className="text-text-tertiary text-xs block mt-1">Messages Sent</span>
+                </div>
+                <div>
+                  <span className="text-2xl font-display font-bold text-text-primary">{chatHistory.filter(m => m.role === 'model').length}</span>
+                  <span className="text-text-tertiary text-xs block mt-1">Agent Replies</span>
+                </div>
+                <div>
+                  <span className="text-2xl font-display font-bold text-text-primary">{steps.length}</span>
+                  <span className="text-text-tertiary text-xs block mt-1">Work Steps</span>
+                </div>
+              </div>
+            </div>
+
+            {address && agentId && (
+              <div className="p-8 border-b border-border-subtle">
+                <p className="text-xs uppercase tracking-widest font-bold text-text-tertiary mb-5">Rate This Agent</p>
+                {ratingSubmitted ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <span key={star} className={`text-2xl ${star <= reviewRating ? 'text-accent' : 'text-border-strong'}`}>★</span>
+                      ))}
+                    </div>
+                    <span className="text-xs uppercase tracking-widest text-text-tertiary">Submitted — thank you</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => handleRateAgent(star)}
+                          onMouseEnter={() => setRatingHover(star)}
+                          onMouseLeave={() => setRatingHover(0)}
+                          className="text-2xl transition-colors"
+                        >
+                          <span className={(ratingHover || reviewRating) >= star ? 'text-accent' : 'text-border-strong'}>★</span>
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-xs text-text-tertiary">Click to rate</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="p-8 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => router.push('/sessions')}
+                className="text-xs uppercase tracking-widest font-bold text-text-tertiary hover:text-text-primary transition-colors"
+              >
+                View All Sessions &rarr;
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowReview(false)}
+                className="bg-text-primary text-surface-elevated font-bold px-8 py-3 text-xs uppercase tracking-widest transition-colors hover:bg-accent"
+              >
+                Dismiss
+              </button>
             </div>
           </div>
         </div>
