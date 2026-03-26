@@ -35,7 +35,6 @@ export default function AgentWorkTimeline({ steps }: { steps: AgentStep[] }) {
                   delay: index * 0.05
                 }}
                 className="border-l pl-6 py-1"
-                style={{ willChange: 'transform, opacity' }}
               >
                 <div className={`text-xs font-bold uppercase tracking-widest ${KIND_COLORS[step.kind] || 'text-text-secondary'}`}>
                   [{step.kind}] {step.title}

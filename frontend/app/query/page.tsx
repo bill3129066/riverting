@@ -19,9 +19,10 @@ export default function QueryPage() {
   const [state, setState] = useState<'idle' | 'requires-payment' | 'paying' | 'paid' | 'error'>('idle')
   const [result, setResult] = useState<any>(null)
   const [paymentInfo, setPaymentInfo] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchAgents().then(setAgents).catch(console.error).finally(() => setLoadingAgents(false))
+    fetchAgents().then(setAgents).catch((e: any) => setError(e.message || 'Failed to fetch agents')).finally(() => setLoadingAgents(false))
   }, [])
 
   const handleQuery = async () => {
@@ -79,6 +80,13 @@ export default function QueryPage() {
       <div className="max-w-3xl mx-auto">
         <h1 className="font-display font-bold text-[5rem] leading-none mb-6">Spot Query</h1>
         <p className="font-display italic text-2xl text-text-secondary mb-16">Single-request agents. Pay per query. No subscriptions.</p>
+
+        {error && (
+          <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mb-8">
+            <p className="text-error text-sm">{error}</p>
+            <button type="button" onClick={() => setError(null)} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
+          </div>
+        )}
 
         <div className="border border-border-subtle bg-surface-elevated p-8 mb-12">
           <label htmlFor="agent-select" className="block text-xs uppercase tracking-widest text-text-secondary mb-4">Select Agent</label>

@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { fetchSessions } from '@/lib/api'
 
 const STATUS_STYLES: Record<string, string> = {
-  active: 'bg-[#00d4aa]/10 text-[#00d4aa]',
-  paused: 'bg-yellow-900/30 text-yellow-400',
-  stopped: 'bg-[#333] text-[#666]',
+  active: 'border border-accent text-accent',
+  paused: 'border border-warning text-warning',
+  stopped: 'border border-border-strong text-text-tertiary',
 }
 
 function formatCost(microUnits: number) {
@@ -25,64 +25,90 @@ function formatDuration(createdAt: string, endedAt: string | null) {
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchSessions()
       .then(setSessions)
-      .catch(console.error)
+      .catch((e: any) => setError(e.message || 'Failed to fetch sessions'))
       .finally(() => setLoading(false))
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+    <div className="bg-background min-h-screen text-text-primary">
+      <div className="max-w-[1920px] mx-auto px-6 md:px-12 lg:px-24 pt-24 pb-32">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-24">
           <div>
-            <h1 className="text-3xl font-bold">My Sessions</h1>
-            <p className="text-[#666] text-sm mt-1">所有已啟動的 Agent 工作紀錄</p>
+            <h1 className="font-display font-bold text-[5rem] leading-[0.95] tracking-tight mb-4">
+              My Sessions
+            </h1>
+            <p className="font-display italic text-2xl text-text-secondary">
+              All agent session history and work records.
+            </p>
           </div>
           <Link
             href="/marketplace"
-            className="bg-[#00d4aa] text-black font-bold px-5 py-2.5 rounded-xl hover:bg-[#00b894] transition-colors text-sm"
+            className="group flex items-center gap-2 border-b border-text-primary pb-1 text-sm font-medium text-text-primary transition-colors hover:text-accent hover:border-accent"
           >
-            + Start New Session
+            Start New Session
+            <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-1">arrow_forward</span>
           </Link>
         </div>
 
+        {error && (
+          <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mb-8">
+            <p className="text-error text-sm">{error}</p>
+            <button type="button" onClick={() => setError(null)} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
+          </div>
+        )}
+
         {loading ? (
-          <p className="text-[#666]">Loading...</p>
+          <div className="space-y-8 border-t border-border-subtle">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse border-b border-border-subtle py-8 flex flex-col px-8">
+                <div className="h-8 bg-surface-dim w-1/3 mb-2" />
+                <div className="h-4 bg-surface-dim w-1/4 mb-4" />
+                <div className="h-4 bg-surface-dim w-1/2" />
+              </div>
+            ))}
+          </div>
         ) : sessions.length === 0 ? (
-          <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-10 text-center">
-            <p className="text-[#666] mb-4">還沒有任何 Session</p>
-            <Link href="/marketplace" className="text-[#00d4aa] hover:underline text-sm">
-              前往 Marketplace 啟動第一個 Agent →
+          <div className="bg-surface-dim p-24 flex flex-col items-center justify-center text-center">
+            <span className="material-symbols-outlined text-4xl text-text-tertiary mb-6">stream</span>
+            <h3 className="font-display text-3xl mb-4 italic">No sessions yet</h3>
+            <p className="text-text-secondary mb-8 max-w-md">
+              Start a session from the Marketplace to begin streaming agent work.
+            </p>
+            <Link href="/marketplace" className="font-display italic text-accent hover:text-accent-muted text-lg transition-colors">
+              Browse agents and start your first session &rarr;
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="flex flex-col border-t border-border-subtle">
             {sessions.map((s) => (
               <Link
                 key={s.id}
                 href={`/session/${s.id}`}
-                className="block bg-[#111] border border-[#1a1a1a] rounded-xl p-4 hover:border-[#00d4aa]/30 transition-colors"
+                className="group flex flex-col md:flex-row justify-between items-start md:items-center gap-4 py-8 border-b border-border-subtle hover:bg-surface-dim transition-colors px-4 md:px-8"
               >
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[s.status] ?? STATUS_STYLES.stopped}`}>
-                        {s.status}
-                      </span>
-                      <span className="text-xs text-[#555] font-mono">#{s.id.slice(0, 8)}</span>
-                    </div>
-                    <p className="font-semibold">Agent #{s.agent_id}</p>
-                    <p className="text-xs text-[#555]">
-                      {new Date(s.created_at).toLocaleString()} · {formatDuration(s.created_at, s.ended_at)}
-                    </p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className={`text-xs uppercase tracking-widest px-3 py-1 font-bold ${STATUS_STYLES[s.status] ?? STATUS_STYLES.stopped}`}>
+                      {s.status}
+                    </span>
+                    <span className="text-xs text-text-tertiary font-mono">#{s.id.slice(0, 8)}</span>
                   </div>
-                  <div className="text-right space-y-1">
-                    <p className="text-[#00d4aa] font-bold">{formatCost(s.total_rate * 4)}</p>
-                    <p className="text-xs text-[#555]">{formatCost(s.total_rate)}/sec</p>
-                  </div>
+                  <h3 className="font-display text-2xl font-bold group-hover:text-accent transition-colors">
+                    Agent #{s.agent_id}
+                  </h3>
+                  <p className="text-xs text-text-tertiary font-mono">
+                    {new Date(s.created_at).toLocaleString()} · {formatDuration(s.created_at, s.ended_at)}
+                  </p>
+                </div>
+                <div className="text-right space-y-1">
+                  <p className="text-accent font-display text-2xl font-bold">{formatCost(s.total_rate * 4)}</p>
+                  <p className="text-xs text-text-secondary uppercase tracking-widest">{formatCost(s.total_rate)}/sec</p>
                 </div>
               </Link>
             ))}

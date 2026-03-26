@@ -48,6 +48,7 @@ export default function SettingsPage() {
   const [depositing, setDepositing] = useState(false)
   const [depositSuccess, setDepositSuccess] = useState(false)
   const [platformBalance, setPlatformBalance] = useState<{ balance: number; total_deposited: number; total_spent: number } | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setDisplayName(localStorage.getItem('riverting_display_name') || '')
@@ -55,7 +56,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!address) return
-    fetchBalance(address).then(setPlatformBalance).catch(() => {})
+    fetchBalance(address).then(setPlatformBalance).catch((e: any) => setError(e.message || 'Failed to fetch balance'))
   }, [address])
 
   const { data: balance, refetch: refetchBalance } = useReadContract({
@@ -85,7 +86,7 @@ export default function SettingsPage() {
       refetchBalance()
       setTimeout(() => setApproved(false), 3000)
     }
-  }, [txSuccess])
+  }, [txSuccess, approving, refetchAllowance, refetchBalance])
 
   function handleApprove() {
     if (!address) return
@@ -112,7 +113,7 @@ export default function SettingsPage() {
       setDepositSuccess(true)
       setTimeout(() => setDepositSuccess(false), 3000)
     } catch (e: any) {
-      alert(e.message)
+      setError(e.message)
     } finally {
       setDepositing(false)
     }
@@ -135,318 +136,347 @@ export default function SettingsPage() {
   const step2Done = platformBalance !== null && platformBalance.balance > 0
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-[#666] text-sm mt-1">Account & balance management</p>
+    <div className="bg-background min-h-screen text-text-primary">
+      <div className="max-w-[1920px] mx-auto px-24 pt-24 pb-32">
+        <div className="max-w-2xl mx-auto space-y-16">
+          <div>
+            <h1 className="font-display font-bold text-[5rem] leading-[0.95] tracking-tight mb-6">Settings</h1>
+            <p className="text-text-secondary text-lg mb-8">Account & balance management</p>
+          </div>
+
+          {error && (
+            <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mb-8">
+              <p className="text-error text-sm">{error}</p>
+              <button type="button" onClick={() => setError(null)} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
+            </div>
+          )}
+
+          {isConnected && (
+            <section className="border border-border-subtle">
+              <div className="bg-surface-dim px-8 py-4 border-b border-border-subtle">
+                <p className="text-xs text-text-secondary uppercase tracking-widest">Funding flow</p>
+              </div>
+              <div className="flex flex-col">
+                <div className={`flex items-start gap-8 px-8 py-6 border-b border-border-subtle ${step1Done ? 'opacity-100' : 'opacity-70'}`}>
+                  <span className={`font-display italic text-2xl ${step1Done ? 'text-accent' : 'text-text-tertiary'}`}>
+                    {step1Done ? '✓' : '01'}
+                  </span>
+                  <div>
+                    <h3 className="font-display text-2xl mb-1">Approve</h3>
+                    <p className="text-sm text-text-secondary">Grant contract permission to spend USDC</p>
+                  </div>
+                </div>
+
+                <div className={`flex items-start gap-8 px-8 py-6 border-b border-border-subtle ${step2Done ? 'opacity-100' : step1Done ? 'opacity-100' : 'opacity-40'}`}>
+                  <span className={`font-display italic text-2xl ${step2Done ? 'text-accent' : 'text-text-tertiary'}`}>
+                    {step2Done ? '✓' : '02'}
+                  </span>
+                  <div>
+                    <h3 className="font-display text-2xl mb-1">Deposit</h3>
+                    <p className="text-sm text-text-secondary">Fund your platform balance</p>
+                  </div>
+                </div>
+
+                <div className={`flex items-start gap-8 px-8 py-6 ${step2Done ? 'opacity-100' : 'opacity-40'}`}>
+                  <span className={`font-display italic text-2xl ${step2Done ? 'text-accent' : 'text-text-tertiary'}`}>
+                    {step2Done ? '✓' : '03'}
+                  </span>
+                  <div>
+                    <h3 className="font-display text-2xl mb-1">Run Skills</h3>
+                    <p className="text-sm text-text-secondary">Charged from platform balance</p>
+                  </div>
+                </div>
+              </div>
+
+              {!step1Done && (
+                <div className="px-8 py-4 border-t border-border-subtle bg-surface-dim">
+                  <p className="text-xs text-text-secondary uppercase tracking-widest flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm">info</span>
+                    Complete step 1 (Approve) before depositing funds
+                  </p>
+                </div>
+              )}
+              {step1Done && !step2Done && (
+                <div className="px-8 py-4 border-t border-border-subtle bg-surface-dim">
+                  <p className="text-xs text-accent uppercase tracking-widest flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm">info</span>
+                    Approved. Complete step 2 (Deposit) to fund your platform balance.
+                  </p>
+                </div>
+              )}
+              {step1Done && step2Done && (
+                <div className="px-8 py-4 border-t border-border-subtle bg-surface-dim">
+                  <p className="text-xs text-accent uppercase tracking-widest flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm">check_circle</span>
+                    All set. You can start running Skills.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+
+          {isConnected && (
+            <section>
+              <h2 className="font-display text-3xl mb-6">Balance Overview</h2>
+              <div className="grid grid-cols-3 border border-border-subtle">
+                <div className="p-8 border-r border-border-subtle bg-surface flex flex-col justify-between">
+                  <p className="text-text-secondary text-xs uppercase tracking-widest mb-4">Wallet USDC</p>
+                  <div>
+                    <p className="font-display text-4xl text-text-primary mb-2">
+                      {usdcBalance.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-text-tertiary">On-chain holdings</p>
+                  </div>
+                </div>
+                <div className="p-8 border-r border-border-subtle bg-surface flex flex-col justify-between border-b-2 border-b-accent">
+                  <p className="text-accent text-xs uppercase tracking-widest mb-4">Platform Balance</p>
+                  <div>
+                    <p className="font-display text-4xl text-accent mb-2">
+                      {platformAvailable.toFixed(4)}
+                    </p>
+                    <p className="text-xs text-text-tertiary">Available for Skills</p>
+                  </div>
+                </div>
+                <div className="p-8 bg-surface flex flex-col justify-between">
+                  <p className="text-text-secondary text-xs uppercase tracking-widest mb-4">Approved Limit</p>
+                  <div>
+                    <p className="font-display text-4xl text-text-primary mb-2">
+                      {isUnlimited ? '∞' : authorizedAmount.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-text-tertiary">Escrow spending cap</p>
+                  </div>
+                </div>
+              </div>
+              
+              {platformBalance && (
+                <div className="grid grid-cols-2 border-x border-b border-border-subtle bg-surface-dim">
+                  <div className="px-8 py-4 border-r border-border-subtle flex justify-between items-center text-sm">
+                    <span className="text-text-secondary">Total deposited</span>
+                    <span className="font-mono text-text-primary">${(platformBalance.total_deposited / 1_000_000).toFixed(4)}</span>
+                  </div>
+                  <div className="px-8 py-4 flex justify-between items-center text-sm">
+                    <span className="text-text-secondary">Total spent</span>
+                    <span className="font-mono text-text-primary">${(platformBalance.total_spent / 1_000_000).toFixed(4)}</span>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          <section className="border border-border-subtle">
+            <div className="bg-surface-dim px-8 py-6 border-b border-border-subtle flex items-center gap-4">
+              <span className={`font-display italic text-2xl ${step1Done ? 'text-accent' : 'text-text-tertiary'}`}>
+                {step1Done ? '✓' : '01'}
+              </span>
+              <div>
+                <h2 className="font-display text-2xl">Authorize Escrow to spend USDC</h2>
+                <p className="text-sm text-text-secondary mt-1">This only grants permission — no funds are moved</p>
+              </div>
+            </div>
+
+            <div className="p-8">
+              {!isConnected ? (
+                <p className="text-text-secondary text-sm">Connect your wallet to continue</p>
+              ) : (
+                <div className="space-y-8">
+                  <div>
+                    <div className="block text-xs text-text-secondary uppercase tracking-widest mb-4">Select Amount</div>
+                    <div className="flex gap-2 flex-wrap">
+                      {APPROVE_PRESETS.map(preset => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setApproveAmount(String(preset))}
+                          className={`px-6 py-3 text-sm font-sans uppercase tracking-widest border transition-colors ${
+                            approveAmount === String(preset)
+                              ? 'border-accent text-accent'
+                              : 'border-border-strong text-text-secondary hover:text-text-primary hover:border-text-tertiary'
+                          }`}
+                        >
+                          ${preset}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setApproveAmount('max')}
+                        className={`px-6 py-3 text-sm font-sans uppercase tracking-widest border transition-colors ${
+                          approveAmount === 'max'
+                            ? 'border-accent text-accent'
+                            : 'border-border-strong text-text-secondary hover:text-text-primary hover:border-text-tertiary'
+                        }`}
+                      >
+                        Unlimited
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="approve-amount" className="block text-xs text-text-secondary uppercase tracking-widest mb-4">Custom Amount</label>
+                    <div className="flex gap-4 items-stretch">
+                      <div className="relative flex-1">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary">$</span>
+                        <input
+                          id="approve-amount"
+                          type={approveAmount === 'max' ? 'text' : 'number'}
+                          value={approveAmount === 'max' ? 'Unlimited' : approveAmount}
+                          onChange={e => setApproveAmount(e.target.value)}
+                          disabled={approveAmount === 'max'}
+                          min="1"
+                          className="w-full bg-surface-dim border border-border-subtle pl-8 pr-4 py-4 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none disabled:text-text-tertiary transition-colors"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleApprove}
+                        disabled={isLoading || (!approveAmount || (approveAmount !== 'max' && Number(approveAmount) <= 0))}
+                        className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 py-4 hover:bg-text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      >
+                        {isLoading ? 'Approving...' : approved ? 'Approved ✓' : 'Authorize'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm pt-4 border-t border-border-subtle">
+                    <span className="text-text-secondary uppercase tracking-widest text-xs">Current approval:</span>
+                    <span className={`font-mono ${isApproved ? 'text-accent' : 'text-text-tertiary'}`}>
+                      {isUnlimited ? 'Unlimited' : `$${authorizedAmount.toFixed(2)} USDC`}
+                    </span>
+                  </div>
+
+                  <div className="bg-surface-dim border border-border-subtle p-6 space-y-3 text-xs">
+                    <div className="flex justify-between border-b border-border-subtle pb-2">
+                      <span className="text-text-secondary uppercase tracking-widest">USDC Contract</span>
+                      <span className="font-mono text-text-tertiary">{USDC_ADDRESS.slice(0, 10)}...{USDC_ADDRESS.slice(-6)}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-border-subtle pb-2">
+                      <span className="text-text-secondary uppercase tracking-widest">Escrow Contract</span>
+                      <span className="font-mono text-text-tertiary">{ESCROW_ADDRESS.slice(0, 10)}...{ESCROW_ADDRESS.slice(-6)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary uppercase tracking-widest">Network</span>
+                      <span className="text-text-tertiary">X Layer Testnet (1952)</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className={`border transition-opacity ${
+            !isConnected ? 'opacity-50 border-border-subtle' : step1Done ? 'border-accent' : 'border-border-subtle opacity-60'
+          }`}>
+            <div className="bg-surface-dim px-8 py-6 border-b border-border-subtle flex items-center gap-4">
+              <span className={`font-display italic text-2xl ${step2Done ? 'text-accent' : 'text-text-tertiary'}`}>
+                {step2Done ? '✓' : '02'}
+              </span>
+              <div>
+                <h2 className="font-display text-2xl">Deposit funds to platform</h2>
+                <p className="text-sm text-text-secondary mt-1">Deposited funds appear as your platform balance — Skills are charged from here</p>
+              </div>
+            </div>
+
+            <div className="p-8">
+              {!isConnected ? (
+                <p className="text-text-secondary text-sm">Connect your wallet to continue</p>
+              ) : !step1Done ? (
+                <p className="text-text-secondary text-sm">Complete step 1 (Authorize) first</p>
+              ) : (
+                <div className="space-y-8">
+                  <div>
+                    <div className="block text-xs text-text-secondary uppercase tracking-widest mb-4">Select Amount</div>
+                    <div className="flex gap-2 flex-wrap">
+                      {DEPOSIT_PRESETS.map(preset => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setDepositAmount(String(preset))}
+                          className={`px-6 py-3 text-sm font-sans uppercase tracking-widest border transition-colors ${
+                            depositAmount === String(preset)
+                              ? 'border-accent text-accent'
+                              : 'border-border-strong text-text-secondary hover:text-text-primary hover:border-text-tertiary'
+                          }`}
+                        >
+                          ${preset}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="deposit-amount" className="block text-xs text-text-secondary uppercase tracking-widest mb-4">Custom Amount</label>
+                    <div className="flex gap-4 items-stretch">
+                      <div className="relative flex-1">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary">$</span>
+                        <input
+                          id="deposit-amount"
+                          type="number"
+                          value={depositAmount}
+                          onChange={e => setDepositAmount(e.target.value)}
+                          min="1"
+                          className="w-full bg-surface-dim border border-border-subtle pl-8 pr-16 py-4 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none transition-colors"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-text-secondary uppercase tracking-widest">USDC</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleDeposit}
+                        disabled={depositing || !depositAmount || Number(depositAmount) <= 0}
+                        className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 py-4 hover:bg-text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      >
+                        {depositing ? 'Depositing...' : depositSuccess ? 'Deposited ✓' : 'Deposit'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm pt-4 border-t border-border-subtle">
+                    <span className="text-text-secondary uppercase tracking-widest text-xs">Platform balance:</span>
+                    <span className={`font-mono ${step2Done ? 'text-accent' : 'text-text-tertiary'}`}>
+                      ${platformAvailable.toFixed(4)} USDC
+                    </span>
+                  </div>
+
+                  <div className="bg-surface-dim border border-border-subtle p-6 text-xs text-text-secondary space-y-2">
+                    <p className="flex gap-2"><span className="text-text-tertiary">—</span> Approve only grants permission — it does not move any funds</p>
+                    <p className="flex gap-2"><span className="text-text-tertiary">—</span> Deposit moves USDC into the platform so you can run Skills</p>
+                    <p className="flex gap-2"><span className="text-text-tertiary">—</span> Each Skill execution is charged from your platform balance</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="border border-border-subtle">
+            <div className="bg-surface-dim px-8 py-6 border-b border-border-subtle">
+              <h2 className="font-display text-2xl">Profile</h2>
+            </div>
+            
+            <div className="p-8 space-y-8">
+              <div>
+                <label htmlFor="display-name" className="block text-xs text-text-secondary uppercase tracking-widest mb-2">Display name</label>
+                <input
+                  id="display-name"
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  placeholder="Enter your display name"
+                  className="w-full bg-surface-dim border border-border-subtle px-4 py-4 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <div className="block text-xs text-text-secondary uppercase tracking-widest mb-2">Wallet address</div>
+                <div className="bg-surface-dim border border-border-subtle px-4 py-4 text-text-tertiary font-mono text-sm break-all">
+                  {address || 'No wallet connected'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={saveProfile}
+                className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 py-4 hover:bg-text-secondary transition-colors text-sm"
+              >
+                {saved ? 'Saved ✓' : 'Save Profile'}
+              </button>
+            </div>
+          </section>
         </div>
-
-        {/* 3-Step Flow Guide */}
-        {isConnected && (
-          <section className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5">
-            <p className="text-xs text-[#555] uppercase tracking-wide mb-4">Funding flow</p>
-            <div className="flex items-center gap-2">
-              {/* Step 1 */}
-              <div className={`flex items-center gap-2.5 flex-1 ${step1Done ? 'opacity-100' : 'opacity-70'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                  step1Done ? 'bg-[#00d4aa] text-black' : 'bg-[#222] text-[#666]'
-                }`}>
-                  {step1Done ? '✓' : '1'}
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Approve</p>
-                  <p className="text-xs text-[#555]">Grant contract permission</p>
-                </div>
-              </div>
-
-              <div className={`h-px flex-[0.3] ${step1Done ? 'bg-[#00d4aa]/40' : 'bg-[#222]'}`} />
-
-              {/* Step 2 */}
-              <div className={`flex items-center gap-2.5 flex-1 ${step2Done ? 'opacity-100' : step1Done ? 'opacity-100' : 'opacity-40'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                  step2Done ? 'bg-[#00d4aa] text-black' : 'bg-[#222] text-[#666]'
-                }`}>
-                  {step2Done ? '✓' : '2'}
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Deposit</p>
-                  <p className="text-xs text-[#555]">Fund your platform balance</p>
-                </div>
-              </div>
-
-              <div className={`h-px flex-[0.3] ${step2Done ? 'bg-[#00d4aa]/40' : 'bg-[#222]'}`} />
-
-              {/* Step 3 */}
-              <div className={`flex items-center gap-2.5 flex-1 ${step2Done ? 'opacity-100' : 'opacity-40'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                  step2Done ? 'bg-[#00d4aa] text-black' : 'bg-[#222] text-[#666]'
-                }`}>
-                  {step2Done ? '✓' : '3'}
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Run Skills</p>
-                  <p className="text-xs text-[#555]">Charged from platform balance</p>
-                </div>
-              </div>
-            </div>
-
-            {!step1Done && (
-              <p className="text-xs text-yellow-500/80 mt-4 bg-yellow-500/5 border border-yellow-500/10 rounded-lg px-3 py-2">
-                Complete step 1 (Approve) before depositing funds
-              </p>
-            )}
-            {step1Done && !step2Done && (
-              <p className="text-xs text-[#00d4aa]/80 mt-4 bg-[#00d4aa]/5 border border-[#00d4aa]/10 rounded-lg px-3 py-2">
-                Approved. Complete step 2 (Deposit) to fund your platform balance.
-              </p>
-            )}
-            {step1Done && step2Done && (
-              <p className="text-xs text-[#00d4aa]/80 mt-4 bg-[#00d4aa]/5 border border-[#00d4aa]/10 rounded-lg px-3 py-2">
-                All set. You can start running Skills.
-              </p>
-            )}
-          </section>
-        )}
-
-        {/* Balance Summary */}
-        {isConnected && (
-          <section className="bg-gradient-to-br from-[#00d4aa]/10 to-[#111] border border-[#00d4aa]/20 rounded-xl p-6">
-            <h2 className="font-semibold text-lg mb-4">Balance Overview</h2>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-[#0a0a0a]/60 rounded-xl p-4">
-                <p className="text-xs text-[#666] uppercase tracking-wide mb-1">Wallet USDC</p>
-                <p className="text-2xl font-bold text-white">
-                  {usdcBalance.toFixed(2)}
-                </p>
-                <p className="text-xs text-[#555] mt-1">On-chain holdings</p>
-              </div>
-              <div className="bg-[#0a0a0a]/60 rounded-xl p-4 border border-[#00d4aa]/20">
-                <p className="text-xs text-[#00d4aa]/70 uppercase tracking-wide mb-1">Platform Balance</p>
-                <p className="text-2xl font-bold text-[#00d4aa]">
-                  {platformAvailable.toFixed(4)}
-                </p>
-                <p className="text-xs text-[#555] mt-1">Available for Skills</p>
-              </div>
-              <div className="bg-[#0a0a0a]/60 rounded-xl p-4">
-                <p className="text-xs text-[#666] uppercase tracking-wide mb-1">Approved Limit</p>
-                <p className="text-2xl font-bold text-white">
-                  {isUnlimited ? '∞' : authorizedAmount.toFixed(2)}
-                </p>
-                <p className="text-xs text-[#555] mt-1">Escrow spending cap</p>
-              </div>
-            </div>
-            {platformBalance && (
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="flex items-center justify-between bg-[#0a0a0a]/40 rounded-lg px-3 py-2.5 text-xs">
-                  <span className="text-[#555]">Total deposited</span>
-                  <span className="text-[#888]">${(platformBalance.total_deposited / 1_000_000).toFixed(4)}</span>
-                </div>
-                <div className="flex items-center justify-between bg-[#0a0a0a]/40 rounded-lg px-3 py-2.5 text-xs">
-                  <span className="text-[#555]">Total spent</span>
-                  <span className="text-[#888]">${(platformBalance.total_spent / 1_000_000).toFixed(4)}</span>
-                </div>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* Step 1: Authorize */}
-        <section className="bg-[#111] border border-[#1a1a1a] rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-              step1Done ? 'bg-[#00d4aa] text-black' : 'bg-[#333] text-[#888]'
-            }`}>
-              {step1Done ? '✓' : '1'}
-            </div>
-            <div>
-              <h2 className="font-semibold">Authorize Escrow to spend USDC</h2>
-              <p className="text-xs text-[#555] mt-0.5">
-                This only grants permission — no funds are moved
-              </p>
-            </div>
-          </div>
-
-          {!isConnected ? (
-            <p className="text-[#666] text-sm">Connect your wallet to continue</p>
-          ) : (
-            <>
-              <div className="flex gap-2 flex-wrap">
-                {APPROVE_PRESETS.map(preset => (
-                  <button
-                    key={preset}
-                    onClick={() => setApproveAmount(String(preset))}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                      approveAmount === String(preset)
-                        ? 'border-[#00d4aa] text-[#00d4aa] bg-[#00d4aa]/10'
-                        : 'border-[#222] text-[#666] hover:border-[#444]'
-                    }`}
-                  >
-                    ${preset}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setApproveAmount('max')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                    approveAmount === 'max'
-                      ? 'border-[#00d4aa] text-[#00d4aa] bg-[#00d4aa]/10'
-                      : 'border-[#222] text-[#666] hover:border-[#444]'
-                  }`}
-                >
-                  Unlimited
-                </button>
-              </div>
-
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666]">$</span>
-                  <input
-                    type={approveAmount === 'max' ? 'text' : 'number'}
-                    value={approveAmount === 'max' ? 'Unlimited' : approveAmount}
-                    onChange={e => setApproveAmount(e.target.value)}
-                    disabled={approveAmount === 'max'}
-                    min="1"
-                    className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl pl-8 pr-4 py-3 text-white focus:border-[#00d4aa] outline-none disabled:text-[#666]"
-                  />
-                </div>
-                <button
-                  onClick={handleApprove}
-                  disabled={isLoading || (!approveAmount || (approveAmount !== 'max' && Number(approveAmount) <= 0))}
-                  className="bg-[#00d4aa] text-black font-bold px-6 py-3 rounded-xl hover:bg-[#00b894] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                >
-                  {isLoading ? 'Approving...' : approved ? 'Approved ✓' : 'Authorize'}
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm">
-                <div className={`w-2 h-2 rounded-full ${isApproved ? 'bg-[#00d4aa]' : 'bg-[#333]'}`} />
-                <span className="text-[#666]">Current approval:</span>
-                <span className={isApproved ? 'text-[#00d4aa]' : 'text-[#444]'}>
-                  {isUnlimited ? 'Unlimited' : `$${authorizedAmount.toFixed(2)} USDC`}
-                </span>
-              </div>
-
-              <div className="bg-[#0a0a0a] rounded-xl p-4 space-y-2 text-xs border border-[#1a1a1a]">
-                <div className="flex justify-between">
-                  <span className="text-[#555]">USDC Contract</span>
-                  <span className="font-mono text-[#444]">{USDC_ADDRESS.slice(0, 10)}...{USDC_ADDRESS.slice(-6)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#555]">Escrow Contract</span>
-                  <span className="font-mono text-[#444]">{ESCROW_ADDRESS.slice(0, 10)}...{ESCROW_ADDRESS.slice(-6)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#555]">Network</span>
-                  <span className="text-[#444]">X Layer Testnet (1952)</span>
-                </div>
-              </div>
-            </>
-          )}
-        </section>
-
-        {/* Step 2: Deposit */}
-        <section className={`bg-[#111] border rounded-xl p-6 space-y-4 transition-opacity ${
-          !isConnected ? 'opacity-50' : step1Done ? 'border-[#00d4aa]/20' : 'border-[#1a1a1a] opacity-60'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-              step2Done ? 'bg-[#00d4aa] text-black' : 'bg-[#333] text-[#888]'
-            }`}>
-              {step2Done ? '✓' : '2'}
-            </div>
-            <div>
-              <h2 className="font-semibold">Deposit funds to platform</h2>
-              <p className="text-xs text-[#555] mt-0.5">
-                Deposited funds appear as your platform balance — Skills are charged from here
-              </p>
-            </div>
-          </div>
-
-          {!isConnected ? (
-            <p className="text-[#666] text-sm">Connect your wallet to continue</p>
-          ) : !step1Done ? (
-            <p className="text-[#555] text-sm">Complete step 1 (Authorize) first</p>
-          ) : (
-            <>
-              <div className="flex gap-2 flex-wrap">
-                {DEPOSIT_PRESETS.map(preset => (
-                  <button
-                    key={preset}
-                    onClick={() => setDepositAmount(String(preset))}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                      depositAmount === String(preset)
-                        ? 'border-[#00d4aa] text-[#00d4aa] bg-[#00d4aa]/10'
-                        : 'border-[#222] text-[#666] hover:border-[#444]'
-                    }`}
-                  >
-                    ${preset}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666]">$</span>
-                  <input
-                    type="number"
-                    value={depositAmount}
-                    onChange={e => setDepositAmount(e.target.value)}
-                    min="1"
-                    className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl pl-8 pr-16 py-3 text-white focus:border-[#00d4aa] outline-none"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[#555]">USDC</span>
-                </div>
-                <button
-                  onClick={handleDeposit}
-                  disabled={depositing || !depositAmount || Number(depositAmount) <= 0}
-                  className="bg-[#00d4aa] text-black font-bold px-6 py-3 rounded-xl hover:bg-[#00b894] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                >
-                  {depositing ? 'Depositing...' : depositSuccess ? 'Deposited ✓' : 'Deposit'}
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm">
-                <div className={`w-2 h-2 rounded-full ${step2Done ? 'bg-[#00d4aa]' : 'bg-[#333]'}`} />
-                <span className="text-[#666]">Platform balance:</span>
-                <span className={step2Done ? 'text-[#00d4aa]' : 'text-[#444]'}>
-                  ${platformAvailable.toFixed(4)} USDC
-                </span>
-              </div>
-
-              <div className="bg-[#00d4aa]/5 border border-[#00d4aa]/10 rounded-lg px-4 py-3 text-xs text-[#888] space-y-1">
-                <p>• Approve only grants permission — it does not move any funds</p>
-                <p>• Deposit moves USDC into the platform so you can run Skills</p>
-                <p>• Each Skill execution is charged from your platform balance</p>
-              </div>
-            </>
-          )}
-        </section>
-
-        {/* Profile */}
-        <section className="bg-[#111] border border-[#1a1a1a] rounded-xl p-6 space-y-4">
-          <h2 className="font-semibold text-lg">Profile</h2>
-          <div>
-            <label className="block text-sm text-[#888] mb-1.5">Display name</label>
-            <input
-              value={displayName}
-              onChange={e => setDisplayName(e.target.value)}
-              placeholder="Enter your display name"
-              className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-3 text-white placeholder-[#444] focus:border-[#00d4aa] outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-[#888] mb-1.5">Wallet address</label>
-            <div className="bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-3 text-[#666] font-mono text-sm break-all">
-              {address || 'No wallet connected'}
-            </div>
-          </div>
-          <button
-            onClick={saveProfile}
-            className="bg-[#00d4aa] text-black font-bold px-5 py-2.5 rounded-xl hover:bg-[#00b894] transition-colors text-sm"
-          >
-            {saved ? 'Saved ✓' : 'Save'}
-          </button>
-        </section>
       </div>
     </div>
   )

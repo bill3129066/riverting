@@ -2,19 +2,19 @@
 import { useEffect, useState } from 'react'
 import { fetchAgents } from '@/lib/api'
 import AgentCard from '@/components/marketplace/AgentCard'
-import AgentDetailModal from '@/components/marketplace/AgentDetailModal'
 import CategoryFilter from '@/components/marketplace/CategoryFilter'
 
 export default function MarketplacePage() {
   const [agents, setAgents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedAgent, setSelectedAgent] = useState<any>(null)
+  const [expandedAgentId, setExpandedAgentId] = useState<number | null>(null)
   const [category, setCategory] = useState<string>('all')
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAgents()
       .then(setAgents)
-      .catch(console.error)
+      .catch((e: any) => setError(e.message || 'Failed to fetch agents'))
       .finally(() => setLoading(false))
   }, [])
 
@@ -45,6 +45,13 @@ export default function MarketplacePage() {
           <CategoryFilter categories={categories} selected={category} onChange={setCategory} />
         </div>
         
+        {error && (
+          <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mb-8">
+            <p className="text-error text-sm">{error}</p>
+            <button type="button" onClick={() => setError(null)} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
+          </div>
+        )}
+
         {loading ? (
           <div className="space-y-12">
             {[1, 2, 3].map((i) => (
@@ -70,13 +77,14 @@ export default function MarketplacePage() {
         ) : (
           <div className="space-y-12">
             {filtered.map(agent => (
-              <AgentCard key={agent.id} agent={agent} onClick={() => setSelectedAgent(agent)} />
+              <AgentCard 
+                key={agent.id} 
+                agent={agent} 
+                expanded={expandedAgentId === agent.id}
+                onClick={() => setExpandedAgentId(expandedAgentId === agent.id ? null : agent.id)} 
+              />
             ))}
           </div>
-        )}
-        
-        {selectedAgent && (
-          <AgentDetailModal agent={selectedAgent} onClose={() => setSelectedAgent(null)} />
         )}
       </div>
     </div>
