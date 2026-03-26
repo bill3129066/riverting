@@ -172,7 +172,10 @@ function useDeliberation(onComplete: () => void) {
     }, 2000)
     timerRefs.current.push(startTimer)
 
-    return clearTimers
+    return () => {
+      clearTimers()
+      hasRun.current = false
+    }
   }, [clearTimers])
 
   return { agents, consensus }
