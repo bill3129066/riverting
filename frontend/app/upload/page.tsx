@@ -81,7 +81,7 @@ export default function UploadSkillPage() {
   const detectVariables = () => {
     const matches = form.userPromptTemplate.match(/\{\{(\w+)\}\}/g)
     if (!matches) return
-    const vars = [...new Set(matches.map(m => m.replace(/\{\{|\}\}/g, '')))]
+    const vars = Array.from(new Set(matches.map(m => m.replace(/\{\{|\}\}/g, ''))))
     const existing = new Set(inputFields.map(f => f.name))
     const newFields = vars.filter(v => !existing.has(v)).map(v => ({ name: v, type: 'text', required: true }))
     if (newFields.length > 0) setInputFields(prev => [...prev, ...newFields])
