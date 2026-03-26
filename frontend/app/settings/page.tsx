@@ -29,6 +29,13 @@ const ERC20_ABI = [
     inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }],
     outputs: [{ name: '', type: 'uint256' }],
   },
+  {
+    name: 'transfer',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'to', type: 'address' }, { name: 'amount', type: 'uint256' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
 ] as const
 
 const APPROVE_PRESETS = [10, 50, 100, 500]
@@ -43,9 +50,8 @@ export default function SettingsPage() {
   const [depositAmount, setDepositAmount] = useState('10')
   const [displayName, setDisplayName] = useState('')
   const [saved, setSaved] = useState(false)
-  const [approving, setApproving] = useState(false)
+  const [pendingOp, setPendingOp] = useState<'approve' | 'deposit' | null>(null)
   const [approved, setApproved] = useState(false)
-  const [depositing, setDepositing] = useState(false)
   const [depositSuccess, setDepositSuccess] = useState(false)
   const [platformBalance, setPlatformBalance] = useState<{ balance: number; total_deposited: number; total_spent: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -75,25 +81,48 @@ export default function SettingsPage() {
     query: { enabled: !!address },
   })
 
-  const { writeContract, data: txHash, isPending } = useWriteContract()
+  const { writeContract, data: txHash, isPending, error: writeError } = useWriteContract()
   const { isSuccess: txSuccess } = useWaitForTransactionReceipt({ hash: txHash })
 
+  // Handle wallet rejection / tx errors
   useEffect(() => {
-    if (txSuccess && approving) {
-      setApproving(false)
+    if (!writeError) return
+    setPendingOp(null)
+    const msg = writeError.message?.split('\n')[0] || 'Transaction failed'
+    setError(msg.includes('rejected') ? 'Transaction rejected by user.' : msg)
+  }, [writeError])
+
+  // Handle tx confirmed
+  useEffect(() => {
+    if (!txSuccess) return
+    if (pendingOp === 'approve') {
+      setPendingOp(null)
       setApproved(true)
       refetchAllowance()
       refetchBalance()
       setTimeout(() => setApproved(false), 3000)
+    } else if (pendingOp === 'deposit' && address) {
+      // On-chain transfer confirmed — sync backend balance
+      signAction(signMessageAsync, address, 'deposit')
+        .then(auth => depositFunds(Math.round(Number(depositAmount) * 1_000_000), auth))
+        .then(result => {
+          setPlatformBalance(result)
+          setDepositSuccess(true)
+          refetchBalance()
+          setTimeout(() => setDepositSuccess(false), 3000)
+        })
+        .catch((e: any) => {
+          const msg = (e.message || 'Failed to sync balance').split('\n')[0]
+          setError(msg)
+        })
+        .finally(() => setPendingOp(null))
     }
-  }, [txSuccess, approving, refetchAllowance, refetchBalance])
+  }, [txSuccess])
 
   function handleApprove() {
     if (!address) return
-    setApproving(true)
-    const amount = approveAmount === 'max'
-      ? maxUint256
-      : parseUnits(approveAmount, 6)
+    setPendingOp('approve')
+    const amount = approveAmount === 'max' ? maxUint256 : parseUnits(approveAmount, 6)
     writeContract({
       address: USDC_ADDRESS,
       abi: ERC20_ABI,
@@ -102,21 +131,15 @@ export default function SettingsPage() {
     })
   }
 
-  async function handleDeposit() {
+  function handleDeposit() {
     if (!address) return
-    setDepositing(true)
-    try {
-      const amount = Math.round(Number(depositAmount) * 1_000_000)
-      const auth = await signAction(signMessageAsync, address, 'deposit')
-      const result = await depositFunds(amount, auth)
-      setPlatformBalance(result)
-      setDepositSuccess(true)
-      setTimeout(() => setDepositSuccess(false), 3000)
-    } catch (e: any) {
-      setError(e.message)
-    } finally {
-      setDepositing(false)
-    }
+    setPendingOp('deposit')
+    writeContract({
+      address: USDC_ADDRESS,
+      abi: ERC20_ABI,
+      functionName: 'transfer',
+      args: [ESCROW_ADDRESS, parseUnits(depositAmount, 6)],
+    })
   }
 
   function saveProfile() {
@@ -130,7 +153,9 @@ export default function SettingsPage() {
   const isUnlimited = allowance && (allowance as bigint) === maxUint256
   const isApproved = isUnlimited || authorizedAmount > 0
   const platformAvailable = platformBalance ? platformBalance.balance / 1_000_000 : 0
-  const isLoading = approving || isPending
+  const isApproving = pendingOp === 'approve'
+  const isDepositing = pendingOp === 'deposit'
+  const isLoading = isPending || pendingOp !== null
 
   const step1Done = isApproved
   const step2Done = platformBalance !== null && platformBalance.balance > 0
@@ -331,7 +356,7 @@ export default function SettingsPage() {
                         disabled={isLoading || (!approveAmount || (approveAmount !== 'max' && Number(approveAmount) <= 0))}
                         className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 py-4 hover:bg-text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                       >
-                        {isLoading ? 'Approving...' : approved ? 'Approved ✓' : 'Authorize'}
+                        {isApproving ? 'Approving...' : approved ? 'Approved ✓' : 'Authorize'}
                       </button>
                     </div>
                   </div>
@@ -420,10 +445,10 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={handleDeposit}
-                        disabled={depositing || !depositAmount || Number(depositAmount) <= 0}
+                        disabled={isDepositing || !depositAmount || Number(depositAmount) <= 0}
                         className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 py-4 hover:bg-text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                       >
-                        {depositing ? 'Depositing...' : depositSuccess ? 'Deposited ✓' : 'Deposit'}
+                        {isDepositing ? 'Depositing...' : depositSuccess ? 'Deposited ✓' : 'Deposit'}
                       </button>
                     </div>
                   </div>
