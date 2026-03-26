@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAccount, useSignMessage } from 'wagmi'
 import { signAction } from '@/lib/sign-action'
-import { chatInSession, pauseSession, resumeSession, stopSession } from '@/lib/agents-api'
+import { chatInSession, stopSession } from '@/lib/agents-api'
 
 import SalaryTicker from '@/components/session/SalaryTicker'
 import ProofHeartbeatTimeline from '@/components/session/ProofHeartbeatTimeline'
@@ -161,32 +161,6 @@ export default function SessionPage() {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatHistory, id, isValidSession])
 
-  const handlePause = async () => {
-    if (!address) return
-    setIsActionLoading(true)
-    try {
-      const auth = await signAction(signMessageAsync, address, 'pause-session', id)
-      await pauseSession(id, auth)
-    } catch (e: any) {
-      alert(`Failed to pause: ${e.message}`)
-    } finally {
-      setIsActionLoading(false)
-    }
-  }
-
-  const handleResume = async () => {
-    if (!address) return
-    setIsActionLoading(true)
-    try {
-      const auth = await signAction(signMessageAsync, address, 'resume-session', id)
-      await resumeSession(id, auth)
-    } catch (e: any) {
-      alert(`Failed to resume: ${e.message}`)
-    } finally {
-      setIsActionLoading(false)
-    }
-  }
-
   const handleStop = async () => {
     if (!address) return
     if (!confirm('Are you sure you want to completely stop this session?')) return
@@ -194,6 +168,8 @@ export default function SessionPage() {
     try {
       const auth = await signAction(signMessageAsync, address, 'stop-session', id)
       await stopSession(id, auth)
+      setStatus('stopped')
+      eventSourceRef.current?.close()
     } catch (e: any) {
       alert(`Failed to stop: ${e.message}`)
     } finally {
@@ -256,12 +232,6 @@ export default function SessionPage() {
           <StreamStatusBadge status={status} />
           
           <div className="flex gap-2">
-            {status === 'active' && (
-              <button type="button" onClick={handlePause} disabled={!address || isActionLoading} className="px-3 py-1 text-xs border border-border-strong text-text-secondary hover:bg-surface-dim hover:text-white transition-colors disabled:opacity-50">Pause</button>
-            )}
-            {status === 'paused' && (
-              <button type="button" onClick={handleResume} disabled={!address || isActionLoading} className="px-3 py-1 text-xs border border-border-strong text-text-secondary hover:bg-surface-dim hover:text-white transition-colors disabled:opacity-50">Resume</button>
-            )}
             {status !== 'stopped' && (
               <button type="button" onClick={handleStop} disabled={!address || isActionLoading} className="px-3 py-1 text-xs border border-red-900/50 text-red-500 hover:bg-red-900/20 transition-colors disabled:opacity-50">Stop</button>
             )}

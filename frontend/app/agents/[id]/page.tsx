@@ -66,7 +66,7 @@ export default function AgentDetailPage() {
     if (!address || !agent) return
     setStarting(true)
     try {
-      const auth = await signAction(signMessageAsync, address, 'create-session', agent.id)
+      const auth = await signAction(signMessageAsync, address, 'create-session')
       const session = await createSession(agent.id, inputs, auth)
       router.push(`/sessions/${session.id}`)
     } catch (e: any) {
