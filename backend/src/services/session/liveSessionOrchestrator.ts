@@ -93,7 +93,7 @@ function stopSessionInternal(session: ActiveSession): void {
   const db = getDb()
 
   const agent = db
-    .prepare('SELECT creator_wallet FROM agents_v2 WHERE id = $id')
+    .prepare('SELECT creator_wallet FROM agents WHERE id = $id')
     .get({ $id: session.agentId }) as { creator_wallet: string } | undefined
 
   if (agent) {
@@ -120,7 +120,7 @@ export function startSession(
   const db = getDb()
 
   const agent = db
-    .prepare('SELECT * FROM agents_v2 WHERE id = $id AND active = 1')
+    .prepare('SELECT * FROM agents WHERE id = $id AND active = 1')
     .get({ $id: agentId }) as {
       id: string
       rate_per_second: number

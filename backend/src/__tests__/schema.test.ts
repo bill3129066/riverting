@@ -16,9 +16,9 @@ describe('schema-v2.sql', () => {
     db.exec(schemaSql)
   })
 
-  test('creates agents_v2 table', () => {
+  test('creates agents table', () => {
     const tables = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agents_v2'")
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agents'")
       .all()
     expect(tables).toHaveLength(1)
   })
@@ -37,8 +37,8 @@ describe('schema-v2.sql', () => {
     expect(tables).toHaveLength(1)
   })
 
-  test('agents_v2 has correct columns', () => {
-    const cols = db.prepare("PRAGMA table_info('agents_v2')").all() as { name: string }[]
+  test('agents has correct columns', () => {
+    const cols = db.prepare("PRAGMA table_info('agents')").all() as { name: string }[]
     const colNames = cols.map((c) => c.name)
 
     expect(colNames).toContain('id')
@@ -59,8 +59,8 @@ describe('schema-v2.sql', () => {
     expect(colNames).toContain('updated_at')
   })
 
-  test('agents_v2 id column is TEXT PRIMARY KEY', () => {
-    const cols = db.prepare("PRAGMA table_info('agents_v2')").all() as {
+  test('agents id column is TEXT PRIMARY KEY', () => {
+    const cols = db.prepare("PRAGMA table_info('agents')").all() as {
       name: string
       type: string
       pk: number

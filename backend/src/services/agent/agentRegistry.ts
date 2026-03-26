@@ -4,7 +4,7 @@ import type { AgentRow, CreateAgentInput, UpdateAgentInput, AgentStats } from '.
 
 export function listAgents(filters?: { category?: string; creatorWallet?: string; q?: string; limit?: number }): AgentRow[] {
   const db = getDb()
-  let sql = 'SELECT * FROM agents_v2 WHERE active = 1'
+  let sql = 'SELECT * FROM agents WHERE active = 1'
   const params: Record<string, string | number> = {}
 
   if (filters?.category) {
@@ -31,7 +31,7 @@ export function listAgents(filters?: { category?: string; creatorWallet?: string
 }
 
 export function getAgentById(id: string): AgentRow | null {
-  const row = getDb().prepare('SELECT * FROM agents_v2 WHERE id = $id').get({ $id: id }) as AgentRow | undefined
+  const row = getDb().prepare('SELECT * FROM agents WHERE id = $id').get({ $id: id }) as AgentRow | undefined
   return row ?? null
 }
 
@@ -40,7 +40,7 @@ export function createAgent(input: CreateAgentInput): AgentRow {
   const id = randomUUID()
 
   db.prepare(`
-    INSERT INTO agents_v2 (id, onchain_agent_id, creator_wallet, name, description, category,
+    INSERT INTO agents (id, onchain_agent_id, creator_wallet, name, description, category,
       system_prompt, raw_system_prompt, user_prompt_template, model, temperature, max_tokens,
       tools_json, input_schema_json, rate_per_second, metadata_uri)
     VALUES ($id, $onchainAgentId, $creatorWallet, $name, $description, $category,
@@ -75,7 +75,7 @@ export function updateAgent(id: string, input: UpdateAgentInput & { creatorWalle
 
   const db = getDb()
   db.prepare(`
-    UPDATE agents_v2 SET
+    UPDATE agents SET
       name = $name, description = $description, category = $category,
       system_prompt = $systemPrompt, user_prompt_template = $userPromptTemplate,
       model = $model, temperature = $temperature, max_tokens = $maxTokens,
@@ -104,12 +104,12 @@ export function updateAgent(id: string, input: UpdateAgentInput & { creatorWalle
 
 export function deactivateAgent(id: string, creatorWallet: string): void {
   getDb().prepare(
-    "UPDATE agents_v2 SET active = 0, updated_at = datetime('now') WHERE id = $id AND creator_wallet = $wallet",
+    "UPDATE agents SET active = 0, updated_at = datetime('now') WHERE id = $id AND creator_wallet = $wallet",
   ).run({ $id: id, $wallet: creatorWallet })
 }
 
 export function incrementRunCount(id: string): void {
-  getDb().prepare('UPDATE agents_v2 SET run_count = run_count + 1 WHERE id = $id').run({ $id: id })
+  getDb().prepare('UPDATE agents SET run_count = run_count + 1 WHERE id = $id').run({ $id: id })
 }
 
 export function rateAgent(id: string, userWallet: string, rating: number): { avg_rating: number } {
@@ -131,7 +131,7 @@ export function rateAgent(id: string, userWallet: string, rating: number): { avg
   ).get({ $agentId: id }) as { avg: number }
 
   db.prepare(
-    "UPDATE agents_v2 SET avg_rating = $avg, updated_at = datetime('now') WHERE id = $id",
+    "UPDATE agents SET avg_rating = $avg, updated_at = datetime('now') WHERE id = $id",
   ).run({ $id: id, $avg: stats.avg })
 
   return { avg_rating: Math.round(stats.avg * 10) / 10 }

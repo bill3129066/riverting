@@ -11,7 +11,7 @@ export class SettlementService {
     if (!session) return
 
     const agent = db
-      .prepare('SELECT * FROM agents_v2 WHERE id = ?')
+      .prepare('SELECT * FROM agents WHERE id = ?')
       .get(session.agent_id) as any
     if (!agent) return
 
@@ -59,7 +59,7 @@ export class SettlementService {
         s.ended_at,
         s.status as session_status
       FROM curator_earnings ce
-      JOIN agents_v2 a ON ce.agent_id = a.id
+      JOIN agents a ON ce.agent_id = a.id
       JOIN sessions s ON ce.session_id = s.id
       WHERE ce.curator_wallet = ? COLLATE NOCASE
       ORDER BY ce.created_at DESC
