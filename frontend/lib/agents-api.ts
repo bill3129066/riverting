@@ -1,6 +1,7 @@
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-type AuthHeaders = { 'x-wallet-address': string; 'x-signature': string; 'x-timestamp': string }
+import type { SignedHeaders as AuthHeaders } from './sign-action'
+export type { AuthHeaders }
 
 // Agent CRUD
 export async function fetchAgents(params?: { category?: string; q?: string; creator?: string }): Promise<any[]> {
@@ -217,24 +218,28 @@ export async function runSkillStream(
   if (!reader) throw new Error('No response body')
   const decoder = new TextDecoder()
   let buffer = ''
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() || ''
-    let currentEvent = ''
-    for (const line of lines) {
-      if (line.startsWith('event: ')) currentEvent = line.slice(7)
-      else if (line.startsWith('data: ')) {
-        const data = JSON.parse(line.slice(6))
-        if (currentEvent === 'chunk') onChunk(data.text)
-        else if (currentEvent === 'complete') onComplete(data)
-        else if (currentEvent === 'error') onError(data.error)
-        else if (currentEvent === 'tool_use' && onToolUse) onToolUse(data.calls)
-        else if (currentEvent === 'tool_result' && onToolResult) onToolResult(data.results, data.totalCalls)
+  let currentEvent = ''
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        if (line.startsWith('event: ')) currentEvent = line.slice(7)
+        else if (line.startsWith('data: ')) {
+          const data = JSON.parse(line.slice(6))
+          if (currentEvent === 'chunk') onChunk(data.text)
+          else if (currentEvent === 'complete') onComplete(data)
+          else if (currentEvent === 'error') onError(data.error)
+          else if (currentEvent === 'tool_use' && onToolUse) onToolUse(data.calls)
+          else if (currentEvent === 'tool_result' && onToolResult) onToolResult(data.results, data.totalCalls)
+        }
       }
     }
+  } finally {
+    reader.cancel()
   }
 }
 

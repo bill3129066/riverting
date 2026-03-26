@@ -33,7 +33,6 @@ export const xlayerMainnet = defineChain({
 // ─── Contract addresses per chain ────────────────────────────
 
 export interface NetworkConfig {
-  chainId: number
   usdcAddress: `0x${string}`
   escrowAddress: `0x${string}`
   explorerUrl: string
@@ -43,7 +42,6 @@ export interface NetworkConfig {
 export const NETWORK_CONFIGS: Record<number, NetworkConfig> = {
   // X Layer Testnet
   [xlayerTestnet.id]: {
-    chainId: xlayerTestnet.id,
     usdcAddress:   '0xcb8bf24c6ce16ad21d707c9505421a17f2bec79d',
     escrowAddress: '0x93e2794E042b6326356768B7CfDeFc871008239e',
     explorerUrl:   'https://www.oklink.com/xlayer-test',
@@ -51,7 +49,6 @@ export const NETWORK_CONFIGS: Record<number, NetworkConfig> = {
   },
   // X Layer Mainnet (addresses TBD — update after deployment)
   [xlayerMainnet.id]: {
-    chainId: xlayerMainnet.id,
     usdcAddress:   '0x74b7F16337b8972027F6196A17a631aC6dE26d22', // placeholder
     escrowAddress: '0x0000000000000000000000000000000000000000', // placeholder
     explorerUrl:   'https://www.oklink.com/xlayer',

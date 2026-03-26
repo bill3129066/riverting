@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAccount, useChainId, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { useSignMessage } from 'wagmi'
 import { parseUnits, formatUnits, maxUint256 } from 'viem'
@@ -51,6 +51,10 @@ export default function SettingsPage() {
   const [displayName, setDisplayName] = useState('')
   const [saved, setSaved] = useState(false)
   const [pendingOp, setPendingOp] = useState<'approve' | 'deposit' | null>(null)
+  const pendingOpRef = useRef(pendingOp)
+  pendingOpRef.current = pendingOp
+  const depositAmountRef = useRef(depositAmount)
+  depositAmountRef.current = depositAmount
   const [approved, setApproved] = useState(false)
   const [depositSuccess, setDepositSuccess] = useState(false)
   const [platformBalance, setPlatformBalance] = useState<{ balance: number; total_deposited: number; total_spent: number } | null>(null)
@@ -95,16 +99,18 @@ export default function SettingsPage() {
   // Handle tx confirmed
   useEffect(() => {
     if (!txSuccess) return
-    if (pendingOp === 'approve') {
+    const op = pendingOpRef.current
+    if (op === 'approve') {
       setPendingOp(null)
       setApproved(true)
       refetchAllowance()
       refetchBalance()
       setTimeout(() => setApproved(false), 3000)
-    } else if (pendingOp === 'deposit' && address) {
+    } else if (op === 'deposit' && address) {
       // On-chain transfer confirmed — sync backend balance
+      const amount = Math.round(Number(depositAmountRef.current) * 1_000_000)
       signAction(signMessageAsync, address, 'deposit')
-        .then(auth => depositFunds(Math.round(Number(depositAmount) * 1_000_000), auth))
+        .then(auth => depositFunds(amount, auth))
         .then(result => {
           setPlatformBalance(result)
           setDepositSuccess(true)
@@ -117,7 +123,7 @@ export default function SettingsPage() {
         })
         .finally(() => setPendingOp(null))
     }
-  }, [txSuccess])
+  }, [txSuccess]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleApprove() {
     if (!address) return
