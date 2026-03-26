@@ -3,6 +3,8 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAccount, useSignMessage } from 'wagmi'
 import { motion } from 'framer-motion'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { signAction } from '@/lib/sign-action'
 import { chatInSession, stopSession, rateAgent } from '@/lib/agents-api'
 
@@ -385,7 +387,13 @@ export default function SessionPage() {
                     ? 'bg-surface-dim text-text-primary border border-border-strong font-medium'
                     : 'bg-surface text-text-secondary border border-border-subtle'
                 }`}>
+                  {msg.role === 'user' ? (
                   <div className="whitespace-pre-wrap leading-relaxed">{msg.text}</div>
+                ) : (
+                  <div className="prose prose-sm max-w-none prose-headings:text-text-primary prose-headings:font-display prose-p:text-text-secondary prose-strong:text-text-primary prose-a:text-accent prose-code:text-text-primary prose-code:bg-surface-dim prose-code:px-1.5 prose-code:py-0.5 prose-code:text-xs prose-code:before:content-none prose-code:after:content-none prose-pre:bg-surface-dim prose-pre:border prose-pre:border-border-subtle prose-li:text-text-secondary prose-th:text-text-primary prose-td:text-text-secondary prose-hr:border-border-subtle prose-blockquote:border-border-strong prose-blockquote:text-text-tertiary">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                  </div>
+                )}
                 </div>
               </div>
             ))}
