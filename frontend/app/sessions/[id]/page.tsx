@@ -1,7 +1,8 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAccount, useSignMessage } from 'wagmi'
+import { motion } from 'framer-motion'
 import { signAction } from '@/lib/sign-action'
 import { chatInSession, stopSession, rateAgent } from '@/lib/agents-api'
 
@@ -10,7 +11,7 @@ import ProofHeartbeatTimeline from '@/components/session/ProofHeartbeatTimeline'
 import AgentWorkTimeline from '@/components/session/AgentWorkTimeline'
 import StreamStatusBadge from '@/components/session/StreamStatusBadge'
 import CostBreakdown from '@/components/session/CostBreakdown'
-import MagiConsensusEngine from '@/components/session/MagiConsensusEngine'
+import TripartiteDeliberation from '@/components/session/MagiConsensusEngine'
 
 interface ChatMessage {
   id: string
@@ -32,12 +33,17 @@ interface ProofEvent {
   ts: string
 }
 
+type SessionPhase = 'deliberation' | 'chat'
+
+const EASING = [0.16, 1, 0.3, 1] as const
+
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { address } = useAccount()
   const { signMessageAsync } = useSignMessage()
 
+  const [phase, setPhase] = useState<SessionPhase>('deliberation')
   const [status, setStatus] = useState<'active' | 'paused' | 'stopped'>('active')
   const [steps, setSteps] = useState<AgentStep[]>([])
   const [proofs, setProofs] = useState<ProofEvent[]>([])
@@ -45,7 +51,7 @@ export default function SessionPage() {
   const [ratePerSec, setRatePerSec] = useState(0)
   const [curatorRate, setCuratorRate] = useState(0)
   const [platformFee, setPlatformFee] = useState(0)
-  
+
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
     if (typeof window === 'undefined') return []
     try {
@@ -67,7 +73,7 @@ export default function SessionPage() {
   const [ratingSubmitted, setRatingSubmitted] = useState(false)
   const sessionStartRef = useRef(Date.now())
   const sessionEndRef = useRef<number | null>(null)
-  
+
   const [toolCallCount, setToolCallCount] = useState(0)
   interface ToolActivityItem {
     id: string
@@ -78,7 +84,15 @@ export default function SessionPage() {
   const chatBottomRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
   const initialQuerySentRef = useRef(false)
+  const initialQueryRef = useRef<string | null>(null)
   const isValidSession = !!id && id !== 'new'
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !id) return
+    const storageKey = `session_query_${id}`
+    const q = sessionStorage.getItem(storageKey)
+    if (q) initialQueryRef.current = q
+  }, [id])
 
   useEffect(() => {
     if (!isValidSession) {
@@ -118,7 +132,7 @@ export default function SessionPage() {
   useEffect(() => {
     if (!isValidSession) return
     const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-    
+
     const connect = () => {
       const es = new EventSource(`${apiBase}/api/sessions/${id}/stream`)
       eventSourceRef.current = es
@@ -217,6 +231,10 @@ export default function SessionPage() {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatHistory, id, isValidSession])
 
+  const handleDeliberationComplete = useCallback(() => {
+    setPhase('chat')
+  }, [])
+
   const handleStop = async () => {
     if (!address) return
     setIsActionLoading(true)
@@ -270,9 +288,9 @@ export default function SessionPage() {
         role: m.role,
         parts: [{ text: m.text }],
       }))
-      
+
       const { reply, toolCallCount: newToolCount } = await chatInSession(id, text, geminiHistory)
-      
+
       setChatHistory(prev => {
         const next = [...prev]
         if (next.length > 0 && next[next.length - 1].role === 'model') {
@@ -282,7 +300,7 @@ export default function SessionPage() {
         }
         return next
       })
-      
+
       if (newToolCount) {
         setToolCallCount(prev => prev + newToolCount)
       }
@@ -297,8 +315,10 @@ export default function SessionPage() {
     return null
   }
 
+  const isDeliberating = phase === 'deliberation'
+
   return (
-    <div className="max-w-[1920px] mx-auto px-24 pt-24 pb-32">
+    <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
       <div className="flex items-end justify-between border-b border-border-strong pb-8 mb-16">
         <div>
           <h1 className="text-[3rem] font-display italic leading-none mb-2">Live Session</h1>
@@ -307,103 +327,124 @@ export default function SessionPage() {
         <StreamStatusBadge status={status} />
       </div>
 
-      <MagiConsensusEngine />
+      {isDeliberating ? (
+        <TripartiteDeliberation
+          mode="full"
+          onDeliberationComplete={handleDeliberationComplete}
+          query={initialQueryRef.current || undefined}
+        />
+      ) : (
+        <TripartiteDeliberation
+          mode="compact"
+          onDeliberationComplete={handleDeliberationComplete}
+        />
+      )}
 
-      <div className="grid grid-cols-12 gap-8 items-start">
-        <div className="col-span-3 space-y-8">
-          <SalaryTicker accrued={accrued} ratePerSec={ratePerSec} status={status} />
-          <CostBreakdown curatorRate={curatorRate} platformFee={platformFee} />
-        </div>
-
-        <div className="col-span-6 h-full min-h-[40rem]">
-          <AgentWorkTimeline steps={steps} />
-        </div>
-
-        <div className="col-span-3 h-full max-h-[40rem]">
-          <ProofHeartbeatTimeline proofs={proofs} />
-        </div>
-      </div>
-
-      <div className="mt-16 border border-border-subtle bg-surface-elevated flex flex-col h-[36rem] overflow-hidden shadow-2xl shadow-black/5">
-        <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-border-subtle bg-surface">
-          <p className="text-xs text-text-tertiary uppercase tracking-widest font-bold">
-            Chat with Agent
-          </p>
-          <button type="button" onClick={() => setChatHistory([])} className="text-xs uppercase tracking-widest font-bold text-text-tertiary hover:text-text-primary transition-colors">
-            Clear Chat
-          </button>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 bg-surface-elevated">
-          {chatHistory.length === 0 && (
-            <p className="text-text-tertiary text-sm italic font-display text-center py-12">Ask the agent anything about the current session...</p>
-          )}
-          {chatHistory.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] px-6 py-4 text-sm ${
-                msg.role === 'user'
-                  ? 'bg-surface-dim text-text-primary border border-border-strong font-medium'
-                  : 'bg-surface text-text-secondary border border-border-subtle'
-              }`}>
-                <div className="whitespace-pre-wrap leading-relaxed">{msg.text}</div>
-              </div>
-            </div>
-          ))}
-          {chatLoading && (
-            <div className="flex justify-start">
-              <div className="bg-surface text-text-tertiary border border-border-subtle px-6 py-4 text-sm">
-                <span className="flex items-center gap-3 font-medium uppercase tracking-widest text-[10px]">
-                  <span className="w-3 h-3 border-2 border-border-strong border-t-accent animate-spin" />
-                  Thinking...
-                </span>
-              </div>
-            </div>
-          )}
-          <div ref={chatBottomRef} />
-        </div>
-        
-        {toolActivity.length > 0 && (
-          <div className="bg-surface-dim border-t border-border-subtle px-6 py-3">
-            <div className="flex items-center gap-3 text-xs uppercase tracking-widest font-bold text-text-secondary">
-              <span>Tools: {toolCallCount} calls</span>
-              <div className="flex flex-wrap gap-2">
-                {toolActivity.slice(-5).map((a) => (
-                  <span key={a.id} className="bg-surface-elevated border border-border-subtle text-text-secondary px-2 py-1 uppercase tracking-widest text-[10px]">{a.name}</span>
-                ))}
-              </div>
-            </div>
+      <motion.div
+        initial={false}
+        animate={{
+          opacity: isDeliberating ? 0 : 1,
+          y: isDeliberating ? 40 : 0,
+        }}
+        transition={{ duration: 0.8, ease: EASING }}
+        style={{ pointerEvents: isDeliberating ? 'none' : 'auto' }}
+      >
+        <div className="grid grid-cols-12 gap-8 items-start">
+          <div className="col-span-3 space-y-8">
+            <SalaryTicker accrued={accrued} ratePerSec={ratePerSec} status={status} />
+            <CostBreakdown curatorRate={curatorRate} platformFee={platformFee} />
           </div>
-        )}
-        
-        <div className="flex gap-4 p-6 border-t border-border-subtle bg-surface">
-          {status !== 'stopped' && (
+
+          <div className="col-span-6 h-full min-h-[40rem]">
+            <AgentWorkTimeline steps={steps} />
+          </div>
+
+          <div className="col-span-3 h-full max-h-[40rem]">
+            <ProofHeartbeatTimeline proofs={proofs} />
+          </div>
+        </div>
+
+        <div className="mt-16 border border-border-subtle bg-surface-elevated flex flex-col h-[36rem] overflow-hidden shadow-2xl shadow-black/5">
+          <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-border-subtle bg-surface">
+            <p className="text-xs text-text-tertiary uppercase tracking-widest font-bold">
+              Chat with Agent
+            </p>
+            <button type="button" onClick={() => setChatHistory([])} className="text-xs uppercase tracking-widest font-bold text-text-tertiary hover:text-text-primary transition-colors">
+              Clear Chat
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 bg-surface-elevated">
+            {chatHistory.length === 0 && (
+              <p className="text-text-tertiary text-sm italic font-display text-center py-12">Ask the agent anything about the current session...</p>
+            )}
+            {chatHistory.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[75%] px-6 py-4 text-sm ${
+                  msg.role === 'user'
+                    ? 'bg-surface-dim text-text-primary border border-border-strong font-medium'
+                    : 'bg-surface text-text-secondary border border-border-subtle'
+                }`}>
+                  <div className="whitespace-pre-wrap leading-relaxed">{msg.text}</div>
+                </div>
+              </div>
+            ))}
+            {chatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-surface text-text-tertiary border border-border-subtle px-6 py-4 text-sm">
+                  <span className="flex items-center gap-3 font-medium uppercase tracking-widest text-[10px]">
+                    <span className="w-3 h-3 border-2 border-border-strong border-t-accent animate-spin" />
+                    Thinking...
+                  </span>
+                </div>
+              </div>
+            )}
+            <div ref={chatBottomRef} />
+          </div>
+
+          {toolActivity.length > 0 && (
+            <div className="bg-surface-dim border-t border-border-subtle px-6 py-3">
+              <div className="flex items-center gap-3 text-xs uppercase tracking-widest font-bold text-text-secondary">
+                <span>Tools: {toolCallCount} calls</span>
+                <div className="flex flex-wrap gap-2">
+                  {toolActivity.slice(-5).map((a) => (
+                    <span key={a.id} className="bg-surface-elevated border border-border-subtle text-text-secondary px-2 py-1 uppercase tracking-widest text-[10px]">{a.name}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-4 p-6 border-t border-border-subtle bg-surface">
+            {status !== 'stopped' && (
+              <button
+                type="button"
+                onClick={handleStop}
+                disabled={!address || isActionLoading}
+                className="px-6 py-4 text-xs uppercase tracking-widest font-bold border border-red-900/50 text-red-500 hover:bg-red-900/10 transition-colors disabled:opacity-50"
+              >
+                {isActionLoading ? 'Stopping...' : 'End Session'}
+              </button>
+            )}
+            <input
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) sendMessage() }}
+              placeholder={status === 'stopped' ? 'Session ended' : 'Ask the agent...'}
+              disabled={chatLoading || status === 'stopped'}
+              className="flex-1 bg-surface-elevated border border-border-subtle px-6 py-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none disabled:opacity-50 transition-colors"
+            />
             <button
               type="button"
-              onClick={handleStop}
-              disabled={!address || isActionLoading}
-              className="px-6 py-4 text-xs uppercase tracking-widest font-bold border border-red-900/50 text-red-500 hover:bg-red-900/10 transition-colors disabled:opacity-50"
+              onClick={sendMessage}
+              disabled={chatLoading || !chatInput.trim() || status === 'stopped'}
+              className="bg-text-primary text-surface-elevated font-bold px-8 py-4 text-xs uppercase tracking-widest transition-colors hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {isActionLoading ? 'Stopping...' : 'End Session'}
+              Send
             </button>
-          )}
-          <input
-            value={chatInput}
-            onChange={e => setChatInput(e.target.value)}
-            onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) sendMessage() }}
-            placeholder={status === 'stopped' ? 'Session ended' : 'Ask the agent...'}
-            disabled={chatLoading || status === 'stopped'}
-            className="flex-1 bg-surface-elevated border border-border-subtle px-6 py-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none disabled:opacity-50 transition-colors"
-          />
-          <button
-            type="button"
-            onClick={sendMessage}
-            disabled={chatLoading || !chatInput.trim() || status === 'stopped'}
-            className="bg-text-primary text-surface-elevated font-bold px-8 py-4 text-xs uppercase tracking-widest transition-colors hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Send
-          </button>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
       {showReview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">

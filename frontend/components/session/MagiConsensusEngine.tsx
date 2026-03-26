@@ -15,6 +15,12 @@ interface AgentState {
 
 type ConsensusResult = 'idle' | 'processing' | 'yes' | 'no' | 'conditional' | 'error'
 
+interface TripartiteDeliberationProps {
+  mode: 'full' | 'compact'
+  onDeliberationComplete: () => void
+  query?: string
+}
+
 const CONSENSUS_LABELS: Record<ConsensusResult, { kanji: string; latin: string }> = {
   idle: { kanji: '待 機', latin: 'STANDBY' },
   processing: { kanji: '処 理', latin: 'PROCESSING' },
@@ -95,80 +101,79 @@ function deriveConsensus(agents: AgentState[]): ConsensusResult {
   return 'error'
 }
 
-function useDeliberationLoop() {
+function useDeliberation(onComplete: () => void) {
   const [agents, setAgents] = useState<AgentState[]>([
     { id: 'claude', name: 'Claude Opus 4.6', icon: 'neurology', status: 'idle', clipPath: CLIP_PATHS.claude, logs: [] },
     { id: 'gpt', name: 'GPT-5.4', icon: 'psychology', status: 'idle', clipPath: CLIP_PATHS.gpt, logs: [] },
     { id: 'gemini', name: 'Gemini 3.1 Pro', icon: 'memory', status: 'idle', clipPath: CLIP_PATHS.gemini, logs: [] },
   ])
   const [consensus, setConsensus] = useState<ConsensusResult>('idle')
-  const scenarioRef = useRef(0)
   const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([])
+  const hasRun = useRef(false)
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
 
   const clearTimers = useCallback(() => {
     timerRefs.current.forEach(clearTimeout)
     timerRefs.current = []
   }, [])
 
-  const runCycle = useCallback(() => {
-    clearTimers()
-    const scenario = SCENARIOS[scenarioRef.current % SCENARIOS.length]
-    scenarioRef.current++
+  useEffect(() => {
+    if (hasRun.current) return
+    hasRun.current = true
 
-    setAgents(prev => prev.map(a => ({ ...a, status: 'processing' as VoteStatus, logs: [] })))
-    setConsensus('processing')
+    const scenario = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)]
 
-    const agentIds = ['claude', 'gpt', 'gemini'] as const
-    const resolveDelays = [
-      1200 + Math.random() * 2000,
-      1800 + Math.random() * 2500,
-      1400 + Math.random() * 2200,
-    ]
+    const startTimer = setTimeout(() => {
+      setAgents(prev => prev.map(a => ({ ...a, status: 'processing' as VoteStatus, logs: [] })))
+      setConsensus('processing')
 
-    agentIds.forEach((id, i) => {
-      const lines = LOG_LINES[id]
-      const resolveAt = resolveDelays[i]
-      const lineInterval = resolveAt / (lines.length + 1)
+      const agentIds = ['claude', 'gpt', 'gemini'] as const
+      const resolveDelays = [
+        1200 + Math.random() * 2000,
+        1800 + Math.random() * 2500,
+        1400 + Math.random() * 2200,
+      ]
 
-      lines.forEach((line, lineIdx) => {
-        const t = setTimeout(() => {
-          setAgents(prev => prev.map(a =>
-            a.id === id ? { ...a, logs: [...a.logs, line] } : a
-          ))
-        }, lineInterval * (lineIdx + 1))
-        timerRefs.current.push(t)
+      agentIds.forEach((id, i) => {
+        const lines = LOG_LINES[id]
+        const resolveAt = resolveDelays[i]
+        const lineInterval = resolveAt / (lines.length + 1)
+
+        lines.forEach((line, lineIdx) => {
+          const t = setTimeout(() => {
+            setAgents(prev => prev.map(a =>
+              a.id === id ? { ...a, logs: [...a.logs, line] } : a
+            ))
+          }, lineInterval * (lineIdx + 1))
+          timerRefs.current.push(t)
+        })
+
+        const resolveTimer = setTimeout(() => {
+          setAgents(prev => {
+            const next = prev.map(a =>
+              a.id === id ? { ...a, status: scenario.votes[i] } : a
+            )
+            setConsensus(deriveConsensus(next))
+            return next
+          })
+        }, resolveAt)
+        timerRefs.current.push(resolveTimer)
       })
 
-      const resolveTimer = setTimeout(() => {
-        setAgents(prev => {
-          const next = prev.map(a =>
-            a.id === id ? { ...a, status: scenario.votes[i] } : a
-          )
-          setConsensus(deriveConsensus(next))
-          return next
-        })
-      }, resolveAt)
-      timerRefs.current.push(resolveTimer)
-    })
-
-    const maxDelay = Math.max(...resolveDelays)
-    const resetTimer = setTimeout(() => {
-      const holdTimer = setTimeout(() => {
-        setAgents(prev => prev.map(a => ({ ...a, status: 'idle' as VoteStatus, logs: [] })))
-        setConsensus('idle')
-        const nextCycleTimer = setTimeout(runCycle, 1500)
-        timerRefs.current.push(nextCycleTimer)
-      }, 3500)
-      timerRefs.current.push(holdTimer)
-    }, maxDelay + 200)
-    timerRefs.current.push(resetTimer)
-  }, [clearTimers])
-
-  useEffect(() => {
-    const startTimer = setTimeout(runCycle, 2000)
+      const maxDelay = Math.max(...resolveDelays)
+      const completeTimer = setTimeout(() => {
+        const holdTimer = setTimeout(() => {
+          onCompleteRef.current()
+        }, 3500)
+        timerRefs.current.push(holdTimer)
+      }, maxDelay + 200)
+      timerRefs.current.push(completeTimer)
+    }, 2000)
     timerRefs.current.push(startTimer)
+
     return clearTimers
-  }, [runCycle, clearTimers])
+  }, [clearTimers])
 
   return { agents, consensus }
 }
@@ -386,80 +391,108 @@ function HeaderBar({ side, title }: { side: 'left' | 'right'; title: string }) {
   )
 }
 
-export default function MagiConsensusEngine() {
-  const { agents, consensus } = useDeliberationLoop()
+export default function TripartiteDeliberation({ mode, onDeliberationComplete, query }: TripartiteDeliberationProps) {
+  const { agents, consensus } = useDeliberation(onDeliberationComplete)
   const allResolved = agents.every(a => a.status !== 'processing' && a.status !== 'idle')
 
+  if (mode === 'compact') {
+    return (
+      <div className="flex items-center gap-4 py-4 px-6 border border-border-subtle bg-surface-elevated mb-8">
+        <div className="w-2 h-2 bg-accent" style={{ animation: 'breathe 2s ease-in-out infinite' }} />
+        <span className="text-xs uppercase tracking-widest font-bold text-text-tertiary">
+          Multi-Agent Analysis
+        </span>
+        <span className="text-xs uppercase tracking-widest font-bold text-accent">
+          {CONSENSUS_LABELS[consensus]?.latin || 'COMPLETE'}
+        </span>
+      </div>
+    )
+  }
+
   return (
-    <div className="border border-border-subtle bg-surface-elevated mb-16">
+    <div className="mb-16">
+      <div className="flex items-center gap-4 mb-4">
+        <div className="w-2 h-2 bg-accent" style={{ animation: consensus === 'processing' ? 'breathe 0.8s ease-in-out infinite' : 'none' }} />
+        <span className="text-xs uppercase tracking-widest font-bold text-text-tertiary">
+          Multi-Agent Analysis
+        </span>
+        <div className="flex-1 h-px bg-border-subtle" />
+      </div>
+      {query && (
+        <h2 className="font-display italic text-2xl text-text-primary leading-snug max-w-4xl mb-8">
+          &ldquo;{query}&rdquo;
+        </h2>
+      )}
 
-      <div className="border border-border-subtle m-2 p-4 lg:p-6 relative" style={{ aspectRatio: '2 / 1', minHeight: '450px' }}>
-        <div
-          className="grid gap-3 h-full"
-          style={{
-            gridTemplateColumns: '1fr 2fr 0.5fr 1fr 0.5fr 2fr 1fr',
-            gridTemplateRows: 'auto 2fr 2fr 1fr 3fr auto',
-          }}
-        >
-          <div style={{ gridColumn: '1 / 3', gridRow: '1' }}>
-            <HeaderBar side="left" title="質 問" />
-          </div>
-          <div style={{ gridColumn: '6 / 8', gridRow: '1' }}>
-            <HeaderBar side="right" title="解 決" />
-          </div>
+      <div className="border border-border-subtle bg-surface-elevated">
+        <div className="border border-border-subtle m-2 p-4 lg:p-6 relative" style={{ aspectRatio: '2 / 1', minHeight: '450px' }}>
+          <div
+            className="grid gap-3 h-full"
+            style={{
+              gridTemplateColumns: '1fr 2fr 0.5fr 1fr 0.5fr 2fr 1fr',
+              gridTemplateRows: 'auto 2fr 2fr 1fr 3fr auto',
+            }}
+          >
+            <div style={{ gridColumn: '1 / 3', gridRow: '1' }}>
+              <HeaderBar side="left" title="質 問" />
+            </div>
+            <div style={{ gridColumn: '6 / 8', gridRow: '1' }}>
+              <HeaderBar side="right" title="解 決" />
+            </div>
 
-          <div style={{ gridColumn: '1 / 3', gridRow: '2 / 4' }}>
-            <StatusPanel consensus={consensus} />
-          </div>
+            <div style={{ gridColumn: '1 / 3', gridRow: '2 / 4' }}>
+              <StatusPanel consensus={consensus} />
+            </div>
 
-          <div style={{ gridColumn: '6 / 8', gridRow: '2 / 4', justifySelf: 'end', alignSelf: 'center' }}>
-            <ResponseBox consensus={consensus} />
-          </div>
+            <div style={{ gridColumn: '6 / 8', gridRow: '2 / 4', justifySelf: 'end', alignSelf: 'center' }}>
+              <ResponseBox consensus={consensus} />
+            </div>
 
-          <div style={{ gridColumn: '2 / 4', gridRow: '4 / 7' }}>
-            <WiseManNode agent={agents[2]} index={2} />
-          </div>
+            <div style={{ gridColumn: '2 / 4', gridRow: '4 / 7' }}>
+              <WiseManNode agent={agents[2]} index={2} />
+            </div>
 
-          <div style={{ gridColumn: '3 / 6', gridRow: '1 / 4' }}>
-            <WiseManNode agent={agents[1]} index={1} />
-          </div>
+            <div style={{ gridColumn: '3 / 6', gridRow: '1 / 4' }}>
+              <WiseManNode agent={agents[1]} index={1} />
+            </div>
 
-          <div style={{ gridColumn: '5 / 7', gridRow: '4 / 7' }}>
-            <WiseManNode agent={agents[0]} index={0} />
-          </div>
+            <div style={{ gridColumn: '5 / 7', gridRow: '4 / 7' }}>
+              <WiseManNode agent={agents[0]} index={0} />
+            </div>
 
-          <div style={{ gridColumn: '3', gridRow: '4', alignSelf: 'center' }}>
-            <ConnectionBar
-              rotation={-54}
-              active={agents[2].status !== 'idle' && agents[1].status !== 'idle' && agents[2].status !== 'processing' && agents[1].status !== 'processing'}
-            />
-          </div>
-          <div style={{ gridColumn: '4', gridRow: '5', alignSelf: 'center' }}>
-            <ConnectionBar
-              rotation={0}
-              active={agents[2].status !== 'idle' && agents[0].status !== 'idle' && agents[2].status !== 'processing' && agents[0].status !== 'processing'}
-            />
-          </div>
-          <div style={{ gridColumn: '5', gridRow: '4', alignSelf: 'center' }}>
-            <ConnectionBar
-              rotation={54}
-              active={agents[1].status !== 'idle' && agents[0].status !== 'idle' && agents[1].status !== 'processing' && agents[0].status !== 'processing'}
-            />
-          </div>
+            <div style={{ gridColumn: '3', gridRow: '4', alignSelf: 'center' }}>
+              <ConnectionBar
+                rotation={-54}
+                active={agents[2].status !== 'idle' && agents[1].status !== 'idle' && agents[2].status !== 'processing' && agents[1].status !== 'processing'}
+              />
+            </div>
+            <div style={{ gridColumn: '4', gridRow: '5', alignSelf: 'center' }}>
+              <ConnectionBar
+                rotation={0}
+                active={agents[2].status !== 'idle' && agents[0].status !== 'idle' && agents[2].status !== 'processing' && agents[0].status !== 'processing'}
+              />
+            </div>
+            <div style={{ gridColumn: '5', gridRow: '4', alignSelf: 'center' }}>
+              <ConnectionBar
+                rotation={54}
+                active={agents[1].status !== 'idle' && agents[0].status !== 'idle' && agents[1].status !== 'processing' && agents[0].status !== 'processing'}
+              />
+            </div>
 
-          <div className="flex items-center justify-center" style={{ gridColumn: '3 / 6', gridRow: '5 / 6' }}>
-            <AnimatePresence>
-              {allResolved && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-center text-text-primary font-display font-bold text-xl italic tracking-tight"
-                >
-                  MAGI
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="flex items-center justify-center" style={{ gridColumn: '3 / 6', gridRow: '5 / 6' }}>
+              <AnimatePresence>
+                {allResolved && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center text-text-primary font-display font-bold text-xl italic tracking-tight"
+                  >
+                    MAGI
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>
