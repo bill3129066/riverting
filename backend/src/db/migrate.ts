@@ -4,7 +4,6 @@ import { randomUUID } from 'crypto'
 export function migrate(): void {
   const db = getDb()
 
-  // Count before
   const skillsBefore = (db.query('SELECT COUNT(*) as cnt FROM skills').get() as { cnt: number }).cnt
   const agentsBefore = (db.query('SELECT COUNT(*) as cnt FROM agents').get() as { cnt: number }).cnt
   const execsBefore = (db.query('SELECT COUNT(*) as cnt FROM skill_executions').get() as { cnt: number }).cnt
@@ -12,7 +11,7 @@ export function migrate(): void {
   console.log(`Before migration: ${skillsBefore} skills, ${agentsBefore} old agents, ${execsBefore} executions, ${ratingsBefore} ratings`)
 
   const insertAgent = db.prepare(`
-    INSERT OR IGNORE INTO agents_v2 (
+    INSERT OR IGNORE INTO agents (
       id, onchain_agent_id, creator_wallet, name, description, category,
       system_prompt, raw_system_prompt, user_prompt_template,
       model, temperature, max_tokens, tools_json, input_schema_json,
@@ -43,7 +42,6 @@ export function migrate(): void {
   `)
 
   db.transaction(() => {
-    // 1. Migrate skills → agents_v2 (UUID preserved)
     const skills = db.query('SELECT * FROM skills').all() as any[]
     for (const s of skills) {
       insertAgent.run({
@@ -69,9 +67,8 @@ export function migrate(): void {
         $active: s.active ?? 1,
       })
     }
-    console.log(`Migrated ${skills.length} skills → agents_v2`)
+    console.log(`Migrated ${skills.length} skills`)
 
-    // 2. Migrate old agents → agents_v2 (new UUID, extract blob)
     const oldAgents = db.query('SELECT * FROM agents').all() as any[]
     const oldIdToNewUuid = new Map<number, string>()
     for (const a of oldAgents) {
@@ -102,9 +99,8 @@ export function migrate(): void {
         $active: a.active ?? 1,
       })
     }
-    console.log(`Migrated ${oldAgents.length} old agents → agents_v2`)
+    console.log(`Migrated ${oldAgents.length} old agents`)
 
-    // 3. Migrate skill_executions → agent_executions
     const execs = db.query('SELECT * FROM skill_executions').all() as any[]
     for (const e of execs) {
       insertExecution.run({
@@ -124,9 +120,8 @@ export function migrate(): void {
         $completed_at: e.completed_at ?? null,
       })
     }
-    console.log(`Migrated ${execs.length} skill_executions → agent_executions`)
+    console.log(`Migrated ${execs.length} skill_executions`)
 
-    // 4. Migrate skill_ratings → agent_ratings
     const ratings = db.query('SELECT * FROM skill_ratings').all() as any[]
     for (const r of ratings) {
       insertRating.run({
@@ -137,9 +132,8 @@ export function migrate(): void {
         $created_at: r.created_at,
       })
     }
-    console.log(`Migrated ${ratings.length} skill_ratings → agent_ratings`)
+    console.log(`Migrated ${ratings.length} skill_ratings`)
 
-    // 5. Update sessions.agent_id (old INTEGER → new UUID)
     if (oldIdToNewUuid.size > 0) {
       const updateSession = db.prepare('UPDATE sessions SET agent_id = $newId WHERE agent_id = $oldId')
       for (const [oldId, newId] of oldIdToNewUuid) {
@@ -149,11 +143,10 @@ export function migrate(): void {
     }
   })()
 
-  // Count after
-  const agentsAfter = (db.query('SELECT COUNT(*) as cnt FROM agents_v2').get() as { cnt: number }).cnt
+  const agentsAfter = (db.query('SELECT COUNT(*) as cnt FROM agents').get() as { cnt: number }).cnt
   const execsAfter = (db.query('SELECT COUNT(*) as cnt FROM agent_executions').get() as { cnt: number }).cnt
   const ratingsAfter = (db.query('SELECT COUNT(*) as cnt FROM agent_ratings').get() as { cnt: number }).cnt
-  console.log(`After migration: ${agentsAfter} agents_v2, ${execsAfter} agent_executions, ${ratingsAfter} agent_ratings`)
+  console.log(`After migration: ${agentsAfter} agents, ${execsAfter} agent_executions, ${ratingsAfter} agent_ratings`)
   console.log('Migration complete ✓')
 }
 

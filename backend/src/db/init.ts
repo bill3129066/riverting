@@ -9,11 +9,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export function initDb(): void {
   const db = getDb();
 
-  const schemaPath = resolve(__dirname, 'schema-v2.sql');
+  const schemaPath = resolve(__dirname, 'schema.sql');
   const schema = readFileSync(schemaPath, 'utf-8');
   db.exec(schema);
 
-  const count = db.prepare('SELECT COUNT(*) as cnt FROM agents_v2').get() as { cnt: number };
+  const count = db.prepare('SELECT COUNT(*) as cnt FROM agents').get() as { cnt: number };
   if (count.cnt === 0) {
     console.log('Seeding demo agents and skills...');
     seedAgents();
@@ -27,7 +27,7 @@ export function initDb(): void {
 function seedAgents(): void {
   const db = getDb();
   const insert = db.prepare(`
-    INSERT INTO agents_v2 (
+    INSERT INTO agents (
       id, creator_wallet, name, description, category,
       system_prompt, model, temperature, tools_json,
       active, created_at, updated_at
@@ -110,7 +110,7 @@ function seedSkillsFromDir(): number {
   if (!existsSync(skillsRoot)) return 0;
 
   const insert = db.prepare(`
-    INSERT INTO agents_v2 (
+    INSERT INTO agents (
       id, creator_wallet, name, description, category,
       system_prompt, user_prompt_template, model, temperature, max_tokens,
       input_schema_json, tools_json, rate_per_second, migrated_from, active, created_at, updated_at

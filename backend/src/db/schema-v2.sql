@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS agent_ratings (
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   onchain_session_id INTEGER,
-  agent_id INTEGER NOT NULL REFERENCES agents(id),
+  agent_id TEXT NOT NULL REFERENCES agents_v2(id),
   user_wallet TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'created',
   total_rate INTEGER NOT NULL,
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS proofs (
 CREATE TABLE IF NOT EXISTS curator_earnings (
   id TEXT PRIMARY KEY,
   curator_wallet TEXT NOT NULL,
-  agent_id INTEGER NOT NULL REFERENCES agents(id),
+  agent_id TEXT NOT NULL REFERENCES agents_v2(id),
   session_id TEXT NOT NULL REFERENCES sessions(id),
   earned_amount INTEGER NOT NULL,
   paid_out INTEGER NOT NULL DEFAULT 0,
@@ -120,7 +120,7 @@ CREATE INDEX IF NOT EXISTS idx_curator_earnings_wallet ON curator_earnings(curat
 
 CREATE TABLE IF NOT EXISTS query_sales (
   id TEXT PRIMARY KEY,
-  agent_id INTEGER NOT NULL REFERENCES agents(id),
+  agent_id TEXT NOT NULL REFERENCES agents_v2(id),
   route TEXT NOT NULL,
   payer_address TEXT NOT NULL,
   amount_usdc TEXT NOT NULL,

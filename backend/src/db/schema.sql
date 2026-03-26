@@ -1,21 +1,63 @@
 CREATE TABLE IF NOT EXISTS agents (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  onchain_agent_id INTEGER,
-  curator_wallet TEXT NOT NULL,
+  id TEXT PRIMARY KEY,
+  onchain_agent_id INTEGER UNIQUE,
+  creator_wallet TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT NOT NULL,
-  category TEXT NOT NULL DEFAULT 'defi',
-  curator_rate_per_second INTEGER NOT NULL,
-  skill_config_json TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'general',
+  system_prompt TEXT NOT NULL,
+  raw_system_prompt TEXT,
+  user_prompt_template TEXT,
+  model TEXT NOT NULL DEFAULT 'gemini-2.0-flash',
+  temperature REAL NOT NULL DEFAULT 0.3,
+  max_tokens INTEGER NOT NULL DEFAULT 1024,
+  tools_json TEXT,
+  input_schema_json TEXT,
+  rate_per_second INTEGER NOT NULL DEFAULT 0,
+  avg_rating REAL,
+  run_count INTEGER NOT NULL DEFAULT 0,
+  migrated_from TEXT,
   metadata_uri TEXT,
   active INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_agents_category ON agents(category);
+CREATE INDEX IF NOT EXISTS idx_agents_creator_wallet ON agents(creator_wallet);
+CREATE INDEX IF NOT EXISTS idx_agents_active ON agents(active);
+CREATE INDEX IF NOT EXISTS idx_agents_run_count ON agents(run_count);
+
+CREATE TABLE IF NOT EXISTS agent_executions (
+  id TEXT PRIMARY KEY,
+  agent_id TEXT NOT NULL REFERENCES agents(id),
+  user_wallet TEXT NOT NULL,
+  session_id TEXT,
+  input_json TEXT,
+  output_text TEXT,
+  output_metadata_json TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  error_message TEXT,
+  duration_ms INTEGER,
+  tokens_used INTEGER,
+  amount_charged INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  completed_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS agent_ratings (
+  id TEXT PRIMARY KEY,
+  agent_id TEXT NOT NULL REFERENCES agents(id),
+  user_wallet TEXT NOT NULL,
+  rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(agent_id, user_wallet)
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   onchain_session_id INTEGER,
-  agent_id INTEGER NOT NULL REFERENCES agents(id),
+  agent_id TEXT NOT NULL REFERENCES agents(id),
   user_wallet TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'created',
   total_rate INTEGER NOT NULL,
@@ -51,7 +93,7 @@ CREATE TABLE IF NOT EXISTS proofs (
 CREATE TABLE IF NOT EXISTS curator_earnings (
   id TEXT PRIMARY KEY,
   curator_wallet TEXT NOT NULL,
-  agent_id INTEGER NOT NULL REFERENCES agents(id),
+  agent_id TEXT NOT NULL REFERENCES agents(id),
   session_id TEXT NOT NULL REFERENCES sessions(id),
   earned_amount INTEGER NOT NULL,
   paid_out INTEGER NOT NULL DEFAULT 0,
@@ -64,7 +106,7 @@ CREATE INDEX IF NOT EXISTS idx_curator_earnings_wallet ON curator_earnings(curat
 
 CREATE TABLE IF NOT EXISTS query_sales (
   id TEXT PRIMARY KEY,
-  agent_id INTEGER NOT NULL REFERENCES agents(id),
+  agent_id TEXT NOT NULL REFERENCES agents(id),
   route TEXT NOT NULL,
   payer_address TEXT NOT NULL,
   amount_usdc TEXT NOT NULL,
@@ -74,7 +116,7 @@ CREATE TABLE IF NOT EXISTS query_sales (
 
 CREATE TABLE IF NOT EXISTS skills (
   id TEXT PRIMARY KEY,
-  agent_id INTEGER REFERENCES agents(id),
+  agent_id TEXT REFERENCES agents(id),
   creator_wallet TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -135,7 +177,7 @@ CREATE INDEX IF NOT EXISTS idx_ratings_skill ON skill_ratings(skill_id);
 
 CREATE TABLE IF NOT EXISTS user_balances (
   wallet TEXT PRIMARY KEY,
-  balance INTEGER DEFAULT 0,           -- USDC micro-units
+  balance INTEGER DEFAULT 0,
   total_deposited INTEGER DEFAULT 0,
   total_spent INTEGER DEFAULT 0,
   updated_at TEXT DEFAULT (datetime('now'))
