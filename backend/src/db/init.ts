@@ -9,11 +9,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export function initDb(): void {
   const db = getDb();
 
-  const schemaPath = resolve(__dirname, 'schema.sql');
+  const schemaPath = resolve(__dirname, 'schema-v2.sql');
   const schema = readFileSync(schemaPath, 'utf-8');
   db.exec(schema);
 
-  const count = db.prepare('SELECT COUNT(*) as cnt FROM agents').get() as { cnt: number };
+  const count = db.prepare('SELECT COUNT(*) as cnt FROM agents_v2').get() as { cnt: number };
   if (count.cnt === 0) {
     console.log('Seeding demo agents...');
     seedAgents();

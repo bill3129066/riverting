@@ -1,47 +1,8 @@
+export type SessionState = 'created' | 'active' | 'paused' | 'stopped' | 'failed';
+
 export interface AgentRow {
-  id: number;
-  onchain_agent_id: number | null;
-  curator_wallet: string;
-  name: string;
-  description: string;
-  category: string;
-  curator_rate_per_second: number;
-  skill_config_json: string;
-  metadata_uri: string | null;
-  active: number;
-  created_at: string;
-}
-
-export interface CreateAgentInput {
-  name: string;
-  description: string;
-  category: string;
-  curatorWallet: string;
-  curatorRatePerSecond: number;
-  skillConfigJson: string;
-  metadataUri?: string;
-}
-
-export interface UpdateAgentInput {
-  name?: string;
-  description?: string;
-  category?: string;
-  curatorWallet: string;
-  curatorRatePerSecond?: number;
-  skillConfigJson?: string;
-  metadataUri?: string;
-}
-
-export interface AgentStats {
-  sessionCount: number;
-  totalEarned: number;
-}
-
-// --- Skills ---
-
-export interface SkillRow {
   id: string;
-  agent_id: number | null;
+  onchain_agent_id: number | null;
   creator_wallet: string;
   name: string;
   description: string;
@@ -54,18 +15,17 @@ export interface SkillRow {
   max_tokens: number;
   tools_json: string | null;
   input_schema_json: string | null;
-  price_per_run: number;
-  rate_per_second: number | null;
-  execution_mode: string;
-  active: number;
-  run_count: number;
+  rate_per_second: number;
   avg_rating: number | null;
+  run_count: number;
+  migrated_from: string | null;
   metadata_uri: string | null;
+  active: number;
   created_at: string;
   updated_at: string;
 }
 
-export interface CreateSkillInput {
+export interface CreateAgentInput {
   creatorWallet: string;
   name: string;
   description: string;
@@ -78,15 +38,12 @@ export interface CreateSkillInput {
   maxTokens?: number;
   toolsJson?: string;
   inputSchemaJson?: string;
-  pricePerRun?: number;
   ratePerSecond?: number;
-  executionMode?: string;
   metadataUri?: string;
-  agentId?: number;
+  onchainAgentId?: number;
 }
 
-export interface UpdateSkillInput {
-  creatorWallet: string;
+export interface UpdateAgentInput {
   name?: string;
   description?: string;
   category?: string;
@@ -97,15 +54,19 @@ export interface UpdateSkillInput {
   maxTokens?: number;
   toolsJson?: string;
   inputSchemaJson?: string;
-  pricePerRun?: number;
   ratePerSecond?: number;
-  executionMode?: string;
   metadataUri?: string;
 }
 
-export interface SkillExecutionRow {
+export interface AgentStats {
+  run_count: number;
+  avg_rating: number | null;
+  total_earned: number;
+}
+
+export interface AgentExecutionRow {
   id: string;
-  skill_id: string;
+  agent_id: string;
   user_wallet: string;
   session_id: string | null;
   input_json: string | null;
@@ -119,3 +80,17 @@ export interface SkillExecutionRow {
   created_at: string;
   completed_at: string | null;
 }
+
+export interface AgentRatingRow {
+  id: string;
+  agent_id: string;
+  user_wallet: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+export type SkillRow = AgentRow;
+export type CreateSkillInput = CreateAgentInput;
+export type UpdateSkillInput = UpdateAgentInput;
+export type SkillExecutionRow = AgentExecutionRow;
