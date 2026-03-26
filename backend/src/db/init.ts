@@ -15,59 +15,56 @@ export function initDb(): void {
 
   const count = db.prepare('SELECT COUNT(*) as cnt FROM agents_v2').get() as { cnt: number };
   if (count.cnt === 0) {
-    console.log('Seeding demo agents...');
+    console.log('Seeding demo agents and skills...');
     seedAgents();
-    console.log('Seeded 2 demo agents.');
+    const seededSkills = seedSkillsFromDir();
+    console.log(`Seeded demo agents and ${seededSkills} skills.`);
   } else {
     console.log(`DB already has ${count.cnt} agent(s), skipping seed.`);
-  }
-
-  // Seed skills from skills/ directory
-  const skillCount = db.prepare('SELECT COUNT(*) as cnt FROM skills').get() as { cnt: number };
-  if (skillCount.cnt === 0) {
-    console.log('Seeding skills from skills/ directory...');
-    const seeded = seedSkillsFromDir();
-    console.log(`Seeded ${seeded} skills.`);
-  } else {
-    console.log(`DB already has ${skillCount.cnt} skill(s), skipping skill seed.`);
   }
 }
 
 function seedAgents(): void {
   const db = getDb();
   const insert = db.prepare(`
-    INSERT INTO agents (curator_wallet, name, description, category, curator_rate_per_second, skill_config_json, metadata_uri)
-    VALUES ($curator_wallet, $name, $description, $category, $curator_rate_per_second, $skill_config_json, $metadata_uri)
+    INSERT INTO agents_v2 (
+      id, creator_wallet, name, description, category,
+      system_prompt, model, temperature, tools_json,
+      active, created_at, updated_at
+    )
+    VALUES (
+      $id, $creator_wallet, $name, $description, $category,
+      $system_prompt, $model, $temperature, $tools_json,
+      1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    )
   `);
 
   const agents = [
     {
-      $curator_wallet: '0x0000000000000000000000000000000000000001',
+      $id: randomUUID(),
+      $creator_wallet: '0x0000000000000000000000000000000000000001',
       $name: 'DeFi Pool Analyst',
       $description: 'Analyzes DEX pool health, TVL, volume, and fee activity using OnchainOS Market API.',
       $category: 'defi',
-      $curator_rate_per_second: 1000,
-      $skill_config_json: JSON.stringify({
-        name: 'DeFi Pool Analyst',
+      $system_prompt: JSON.stringify({
         analysisTemplates: ['pool-snapshot'],
-        model: 'gemini-2.5-flash',
-        tools: [{ type: 'onchainos-market', description: 'Fetch pool data' }],
       }),
-      $metadata_uri: null,
+      $model: 'gemini-2.5-flash',
+      $temperature: 0.2,
+      $tools_json: JSON.stringify([{ type: 'onchainos-market', description: 'Fetch pool data' }]),
     },
     {
-      $curator_wallet: '0x0000000000000000000000000000000000000002',
+      $id: randomUUID(),
+      $creator_wallet: '0x0000000000000000000000000000000000000002',
       $name: 'Yield Comparator',
       $description: 'Compares yield opportunities across pools and vaults, ranking by risk-adjusted returns.',
       $category: 'defi',
-      $curator_rate_per_second: 800,
-      $skill_config_json: JSON.stringify({
-        name: 'Yield Comparator',
+      $system_prompt: JSON.stringify({
         analysisTemplates: ['yield-compare'],
-        model: 'gemini-2.5-flash',
-        tools: [{ type: 'onchainos-market', description: 'Fetch yield data' }],
       }),
-      $metadata_uri: null,
+      $model: 'gemini-2.5-flash',
+      $temperature: 0.2,
+      $tools_json: JSON.stringify([{ type: 'onchainos-market', description: 'Fetch yield data' }]),
     },
   ];
 
@@ -113,12 +110,16 @@ function seedSkillsFromDir(): number {
   if (!existsSync(skillsRoot)) return 0;
 
   const insert = db.prepare(`
-    INSERT INTO skills (id, creator_wallet, name, description, category,
+    INSERT INTO agents_v2 (
+      id, creator_wallet, name, description, category,
       system_prompt, user_prompt_template, model, temperature, max_tokens,
-      input_schema_json, tools_json, price_per_run, execution_mode, metadata_uri)
-    VALUES ($id, $creator, $name, $desc, $category,
+      input_schema_json, tools_json, rate_per_second, migrated_from, active, created_at, updated_at
+    )
+    VALUES (
+      $id, $creator, $name, $desc, $category,
       $systemPrompt, $userPromptTemplate, $model, $temperature, $maxTokens,
-      $inputSchema, $toolsJson, $price, $mode, $metadataUri)
+      $inputSchema, $toolsJson, 100, NULL, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    )
   `);
 
   // RPC tools config for DeFi/Security skills
@@ -127,7 +128,7 @@ function seedSkillsFromDir(): number {
     methods: ['eth_blockNumber', 'eth_getBalance', 'eth_getCode', 'eth_call', 'eth_getLogs', 'eth_getStorageAt', 'eth_getTransactionReceipt', 'eth_getBlockByNumber'],
   });
 
-  const CURATOR = '0x0000000000000000000000000000000000000000';
+  const CURATOR = 'system';
   const defaultSchema = JSON.stringify({
     type: 'object',
     properties: { query: { type: 'string' }, address: { type: 'string' }, chain: { type: 'string' } },
@@ -169,9 +170,6 @@ function seedSkillsFromDir(): number {
         $maxTokens: enableTools ? 4096 : 2048,
         $inputSchema: defaultSchema,
         $toolsJson: enableTools ? RPC_TOOLS : null,
-        $price: 5000,
-        $mode: 'stream',
-        $metadataUri: null,
       });
       count++;
       console.log(`  [master] ${displayName}`);
@@ -199,9 +197,6 @@ function seedSkillsFromDir(): number {
           $maxTokens: enableTools ? 4096 : 2048,
           $inputSchema: defaultSchema,
           $toolsJson: enableTools ? RPC_TOOLS : null,
-          $price: 3000,
-          $mode: 'once',
-          $metadataUri: null,
         });
         count++;
         console.log(`  [pattern] ${firstLine}`);

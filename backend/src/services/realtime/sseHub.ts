@@ -1,4 +1,6 @@
-type EventType = 'step' | 'proof' | 'status' | 'earnings' | 'ping'
+type EventType = 'step' | 'proof' | 'status' | 'earnings' | 'ping' | 'chunk' | 'tool_use' | 'tool_result' | 'complete' | 'error'
+
+export type SessionEventType = EventType;
 
 interface Subscriber {
   sessionId: string
@@ -77,6 +79,26 @@ class SSEHub {
       accrued,
       ts: new Date().toISOString(),
     })
+  }
+
+  emitChunk(sessionId: string, chunk: string) {
+    this.emit(sessionId, 'chunk', { chunk, ts: new Date().toISOString() })
+  }
+
+  emitToolUse(sessionId: string, tool: { name: string; args: any }) {
+    this.emit(sessionId, 'tool_use', { ...tool, ts: new Date().toISOString() })
+  }
+
+  emitToolResult(sessionId: string, result: { name: string; result: any }) {
+    this.emit(sessionId, 'tool_result', { ...result, ts: new Date().toISOString() })
+  }
+
+  emitComplete(sessionId: string) {
+    this.emit(sessionId, 'complete', { ts: new Date().toISOString() })
+  }
+
+  emitError(sessionId: string, error: string) {
+    this.emit(sessionId, 'error', { error, ts: new Date().toISOString() })
   }
 
   startPingLoop() {
