@@ -9,16 +9,16 @@ interface Agent {
   name: string
   description: string
   category: string
-  curator_rate_per_second: number
-  curator_wallet: string
+  rate_per_second: number
+  creator_wallet: string
   avg_rating: number | null
   run_count: number
 }
 
 const CATEGORIES = ['all', 'defi', 'trading', 'nft', 'security', 'general', 'research']
 
-function formatPrice(microUnits: number): string {
-  if (microUnits === 0) return 'Free'
+function formatPrice(microUnits: number | undefined | null): string {
+  if (!microUnits) return 'Free'
   return `$${(microUnits / 1_000_000).toFixed(4)}`
 }
 
@@ -40,7 +40,7 @@ export default function AgentsPage() {
   }, [category, search])
 
   const displayed = tab === 'mine' && address
-    ? agents.filter(a => a.curator_wallet?.toLowerCase() === address.toLowerCase())
+    ? agents.filter(a => a.creator_wallet?.toLowerCase() === address.toLowerCase())
     : agents
 
   return (
@@ -144,7 +144,7 @@ export default function AgentsPage() {
         ) : (
         <div className="grid grid-cols-1 gap-8">
             {displayed.map(agent => {
-              const isOwner = address && agent.curator_wallet?.toLowerCase() === address.toLowerCase()
+              const isOwner = address && agent.creator_wallet?.toLowerCase() === address.toLowerCase()
               return (
                 <Link
                   key={agent.id}
@@ -184,7 +184,7 @@ export default function AgentsPage() {
                       </div>
                       <div className="col-span-1 md:col-span-2 md:text-right">
                         <div className="text-[10px] uppercase tracking-widest text-accent mb-1 font-bold">Rate</div>
-                        <div className="font-bold text-lg text-accent">{formatPrice(agent.curator_rate_per_second)}/sec</div>
+                        <div className="font-bold text-lg text-accent">{formatPrice(agent.rate_per_second)}/sec</div>
                       </div>
                     </div>
                     

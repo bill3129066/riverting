@@ -157,7 +157,7 @@ export default function StudioPage() {
                       <div className="flex flex-wrap items-center gap-6 md:gap-10 border-t border-border-subtle pt-6">
                         <span className="text-text-primary text-sm flex items-center gap-2">
                           <span className="material-symbols-outlined text-[18px] text-text-tertiary">payments</span>
-                          <span className="font-bold uppercase tracking-widest text-xs">${((agent.curator_rate_per_second || agent.creator_rate_per_second || 0) / 1_000_000).toFixed(4)}/SEC</span>
+                          <span className="font-bold uppercase tracking-widest text-xs">${((agent.rate_per_second || 0) / 1_000_000).toFixed(4)}/SEC</span>
                         </span>
                         <span className="text-text-secondary text-sm flex items-center gap-2">
                           <span className="material-symbols-outlined text-[18px] text-text-tertiary">account_balance_wallet</span>
