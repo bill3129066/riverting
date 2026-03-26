@@ -48,6 +48,7 @@ export default function AgentDetailPage() {
   const [balance, setBalance] = useState<number | null>(null)
   const [userRating, setUserRating] = useState<number | null>(null)
   const [ratingHover, setRatingHover] = useState(0)
+  const [showRating, setShowRating] = useState(false)
   const [starting, setStarting] = useState(false)
 
   useEffect(() => {
@@ -114,16 +115,8 @@ export default function AgentDetailPage() {
             <span className="text-accent font-bold text-base">{formatRate(agent.rate_per_second)}</span>
             <span>by {agent.creator_wallet.slice(0,6)}...{agent.creator_wallet.slice(-4)}</span>
             <span>{agent.model}</span>
+            {agent.avg_rating && <span className="text-text-secondary">★ {agent.avg_rating.toFixed(1)}</span>}
           </div>
-        </div>
-
-        {/* Rating */}
-        <div className="flex items-center gap-2 mb-16">
-          {[1,2,3,4,5].map(star => (
-            <button key={star} type="button" onClick={() => handleRate(star)} onMouseEnter={() => setRatingHover(star)} onMouseLeave={() => setRatingHover(0)}
-              className={`text-2xl transition-colors ${(ratingHover || userRating || 0) >= star ? 'text-accent' : 'text-border-strong'}`}>★</button>
-          ))}
-          {agent.avg_rating && <span className="text-sm text-text-secondary ml-4 font-bold tracking-widest uppercase">{agent.avg_rating.toFixed(1)} avg</span>}
         </div>
 
         {/* Input Form */}
@@ -165,6 +158,31 @@ export default function AgentDetailPage() {
             <div><span className="text-xs uppercase tracking-widest text-text-tertiary mb-2 block">Max Tokens</span><span className="font-bold text-text-primary">{agent.max_tokens}</span></div>
           </div>
         </div>
+
+        {/* Rating — only for connected wallets, collapsed by default */}
+        {address && (
+          <div className="mt-12 max-w-3xl">
+            {showRating ? (
+              <div className="border border-border-subtle bg-surface-elevated p-6 flex items-center gap-6">
+                <span className="text-xs uppercase tracking-widest text-text-secondary font-bold">Rate this agent</span>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button key={star} type="button" onClick={() => handleRate(star)} onMouseEnter={() => setRatingHover(star)} onMouseLeave={() => setRatingHover(0)}
+                      className={`text-2xl transition-colors ${(ratingHover || userRating || 0) >= star ? 'text-accent' : 'text-border-strong'}`}>★</button>
+                  ))}
+                </div>
+                {userRating && <span className="text-xs uppercase tracking-widest text-text-tertiary">Your rating: {userRating}/5</span>}
+                {!userRating && agent.avg_rating && <span className="text-xs uppercase tracking-widest text-text-tertiary">Avg: {agent.avg_rating.toFixed(1)}</span>}
+                <button type="button" onClick={() => setShowRating(false)} className="ml-auto text-text-tertiary hover:text-text-primary text-sm transition-colors">&times;</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowRating(true)}
+                className="text-xs uppercase tracking-widest text-text-tertiary hover:text-text-secondary transition-colors">
+                {userRating ? `Your rating: ${'★'.repeat(userRating)}${'☆'.repeat(5 - userRating)}` : 'Rate this agent →'}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
