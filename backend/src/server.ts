@@ -6,12 +6,10 @@ import { sessionsRoutes } from './api/sessions.routes.js';
 import { curatorRoutes } from './api/curator.routes.js';
 import { queriesRoutes } from './api/queries.routes.js';
 import { initDb } from './db/init.js';
-import { SessionOrchestrator } from './services/orchestrator/sessionOrchestrator.js';
 import { EventWatcher } from './services/onchain/eventWatcher.js';
 import { ProofRelayer } from './services/proof/proofRelayer.js';
 import { TimeoutWatcher } from './services/proof/timeoutWatcher.js';
 import { sseHub } from './services/realtime/sseHub.js';
-import { instanceManager } from './services/instance/instanceManager.js';
 
 const app = new Hono();
 
@@ -25,8 +23,7 @@ app.use('*', cors({
 
 initDb();
 
-export const orchestrator = new SessionOrchestrator();
-const eventWatcher = new EventWatcher(orchestrator);
+const eventWatcher = new EventWatcher({} as any);
 const proofRelayer = new ProofRelayer();
 const timeoutWatcher = new TimeoutWatcher();
 
@@ -36,7 +33,7 @@ app.route('/api/agents', agentsRoutes);
 app.route('/api/sessions', sessionsRoutes);
 app.route('/api/curator', curatorRoutes);
 app.route('/api/queries', queriesRoutes);
-app.route('/queries', queriesRoutes); // x402 canonical path
+app.route('/queries', queriesRoutes);
 
 const port = parseInt(process.env.PORT || '3001');
 serve({ fetch: app.fetch, port }, async () => {
@@ -47,4 +44,4 @@ serve({ fetch: app.fetch, port }, async () => {
   sseHub.startPingLoop();
 });
 
-export { instanceManager, app };
+export { app };
