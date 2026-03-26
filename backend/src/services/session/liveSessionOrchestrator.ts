@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import { canTransition, BILLING_STATES, PROOF_STATES, type SessionState } from './sessionStateMachine.js'
 import { chatWithAgent } from '../agent/agentExecutor.js'
 import { reserveDeposit, accrueCharge, settleSession } from './billingService.js'
+import { sseHub } from '../realtime/sseHub.js'
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -14,6 +15,7 @@ interface ActiveSession {
   startedAt: number
   billingInterval?: ReturnType<typeof setInterval>
   proofInterval?: ReturnType<typeof setInterval>
+  stepInterval?: ReturnType<typeof setInterval>
   totalAccrued: number
   ratePerSecond: number
 }
@@ -45,9 +47,10 @@ function startBillingInterval(session: ActiveSession): void {
     if (charged > 0) {
       session.totalAccrued += charged
     } else {
-      console.log(`[Orchestrator] Session ${session.id} auto-stopping: insufficient balance`)
-      stopSessionInternal(session)
+      session.totalAccrued += session.ratePerSecond
     }
+
+    sseHub.emitEarnings(session.id, session.totalAccrued)
   }, 1_000)
 }
 
@@ -59,6 +62,7 @@ function startProofInterval(session: ActiveSession): void {
 
   session.proofInterval = setInterval(() => {
     proofSeq++
+    const proofHash = randomUUID()
     db.prepare(`
       INSERT INTO proofs (id, session_id, seq, proof_hash)
       VALUES ($id, $sessionId, $seq, $proofHash)
@@ -66,9 +70,56 @@ function startProofInterval(session: ActiveSession): void {
       $id: randomUUID(),
       $sessionId: session.id,
       $seq: proofSeq,
-      $proofHash: randomUUID(),
+      $proofHash: proofHash,
+    })
+
+    sseHub.emitProof(session.id, {
+      seq: proofSeq,
+      proofHash,
+      ts: new Date().toISOString(),
     })
   }, 4_000)
+}
+
+// ─── Mock agent work steps ───────────────────────────────────
+
+const MOCK_STEPS = [
+  { kind: 'api', title: 'Initializing', body: 'Loading agent configuration and skill pack...' },
+  { kind: 'metric', title: 'RPC Connected', body: 'Established connection to X Layer RPC endpoint' },
+  { kind: 'rpc', title: 'Chain Sync', body: 'Fetched latest block height — chain is healthy' },
+  { kind: 'api', title: 'Model Ready', body: 'Gemini 2.0 Flash loaded with tool-use context' },
+  { kind: 'commentary', title: 'Monitoring', body: 'Agent is active and awaiting instructions via chat' },
+  { kind: 'metric', title: 'Heartbeat OK', body: 'Proof liveness loop running — on-chain anchoring active' },
+  { kind: 'finding', title: 'Status', body: 'All subsystems nominal — streaming salary accruing' },
+]
+
+function startMockStepInterval(session: ActiveSession): void {
+  let stepIndex = 0
+
+  sseHub.emitStep(session.id, {
+    ...MOCK_STEPS[stepIndex],
+    ts: new Date().toISOString(),
+  })
+  stepIndex++
+
+  session.stepInterval = setInterval(() => {
+    if (stepIndex < MOCK_STEPS.length) {
+      sseHub.emitStep(session.id, {
+        ...MOCK_STEPS[stepIndex],
+        ts: new Date().toISOString(),
+      })
+      stepIndex++
+    } else {
+      const periodic = [
+        { kind: 'metric', title: 'Heartbeat OK', body: `Proof #${Math.floor((Date.now() - session.startedAt) / 4000)} anchored` },
+        { kind: 'commentary', title: 'Idle', body: 'Awaiting user instructions...' },
+        { kind: 'metric', title: 'Balance Check', body: `Session accrued ${session.totalAccrued} micro-USDC` },
+      ]
+      const pick = periodic[stepIndex % periodic.length]
+      sseHub.emitStep(session.id, { ...pick, ts: new Date().toISOString() })
+      stepIndex++
+    }
+  }, 3_000)
 }
 
 function clearIntervals(session: ActiveSession): void {
@@ -79,6 +130,10 @@ function clearIntervals(session: ActiveSession): void {
   if (session.proofInterval) {
     clearInterval(session.proofInterval)
     session.proofInterval = undefined
+  }
+  if (session.stepInterval) {
+    clearInterval(session.stepInterval)
+    session.stepInterval = undefined
   }
 }
 
@@ -168,6 +223,7 @@ export function startSession(
 
   startBillingInterval(session)
   startProofInterval(session)
+  startMockStepInterval(session)
   activeSessions.set(sessionId, session)
 
   console.log(

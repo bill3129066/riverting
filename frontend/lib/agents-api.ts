@@ -122,10 +122,10 @@ export async function createSession(agentId: string, inputs: Record<string, stri
   return res.json()
 }
 
-export async function chatInSession(sessionId: string, message: string, history: any[], auth: AuthHeaders): Promise<{ reply: string; toolCallCount: number }> {
+export async function chatInSession(sessionId: string, message: string, history: any[], auth?: AuthHeaders): Promise<{ reply: string; toolCallCount: number }> {
   const res = await fetch(`${API}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...auth },
+    headers: { 'Content-Type': 'application/json', ...(auth ?? {}) },
     body: JSON.stringify({ message, history }),
   })
   if (!res.ok) {

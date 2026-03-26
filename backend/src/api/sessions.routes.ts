@@ -98,7 +98,6 @@ sessionsRoutes.post(
 
 sessionsRoutes.post(
   '/:id/chat',
-  requireSignature('chat'),
   async (c) => {
     const sessionId = c.req.param('id')
     const body = await c.req.json<{

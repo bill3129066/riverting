@@ -179,7 +179,7 @@ export default function SessionPage() {
 
   async function sendMessage() {
     const text = chatInput.trim()
-    if (!text || chatLoading || !address) return
+    if (!text || chatLoading) return
 
     const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', text }
     const nextHistory = [...chatHistory, userMsg]
@@ -188,14 +188,12 @@ export default function SessionPage() {
     setChatLoading(true)
 
     try {
-      const auth = await signAction(signMessageAsync, address, 'chat', id)
-      
       const geminiHistory = nextHistory.slice(0, -1).map(m => ({
         role: m.role,
         parts: [{ text: m.text }],
       }))
       
-      const { reply, toolCallCount: newToolCount } = await chatInSession(id, text, geminiHistory, auth)
+      const { reply, toolCallCount: newToolCount } = await chatInSession(id, text, geminiHistory)
       
       setChatHistory(prev => {
         const next = [...prev]
@@ -312,14 +310,14 @@ export default function SessionPage() {
             value={chatInput}
             onChange={e => setChatInput(e.target.value)}
             onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) sendMessage() }}
-            placeholder={!address ? "Connect wallet to chat" : "Ask the agent..."}
-            disabled={chatLoading || !address}
+            placeholder="Ask the agent..."
+            disabled={chatLoading}
             className="flex-1 bg-surface-elevated border border-border-subtle px-6 py-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none disabled:opacity-50 transition-colors"
           />
           <button
             type="button"
             onClick={sendMessage}
-            disabled={chatLoading || !chatInput.trim() || !address}
+            disabled={chatLoading || !chatInput.trim()}
             className="bg-text-primary text-surface-elevated font-bold px-8 py-4 text-xs uppercase tracking-widest transition-colors hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Send
