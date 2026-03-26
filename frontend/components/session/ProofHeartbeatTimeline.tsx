@@ -25,14 +25,12 @@ export default function ProofHeartbeatTimeline({ proofs }: { proofs: ProofEvent[
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 className="flex items-start gap-3 text-xs"
-                style={{ willChange: 'transform, opacity' }}
               >
                 <motion.div 
                   initial={{ scale: 2 }}
                   animate={{ scale: 1 }}
                   transition={{ duration: 0.5, ease: "easeOut" }}
                   className="w-2 h-2 bg-accent mt-1 flex-shrink-0" 
-                  style={{ willChange: 'transform' }}
                 />
                 <div>
                   <div className="text-accent font-mono font-bold uppercase tracking-widest">#{proof.seq} ✓ Anchored</div>

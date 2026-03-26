@@ -33,12 +33,14 @@ export default function SkillsPage() {
   const [category, setCategory] = useState('all')
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState<'all' | 'mine'>('all')
+  const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const loadSkills = () => {
     setLoading(true)
     fetchSkills({ category: category !== 'all' ? category : undefined, q: search || undefined })
       .then(setSkills)
-      .catch(console.error)
+      .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }
 
@@ -48,14 +50,16 @@ export default function SkillsPage() {
     ? skills.filter(s => s.creator_wallet.toLowerCase() === address.toLowerCase())
     : skills
 
-  const handleDelete = async (skillId: string) => {
-    if (!address || !confirm('Are you sure you want to delete this skill?')) return
+  const confirmDelete = async (skillId: string) => {
+    if (!address) return
     try {
       const auth = await signAction(signMessageAsync, address, 'delete-skill', skillId)
       await deleteSkill(skillId, auth)
+      setDeletingId(null)
       loadSkills()
     } catch (e: any) {
-      alert(e.message)
+      setError(e.message)
+      setDeletingId(null)
     }
   }
 
@@ -103,6 +107,13 @@ export default function SkillsPage() {
           <div className="py-24 border-y border-border-strong text-center">
             <h2 className="font-display text-4xl text-text-primary mb-4 italic">Connect your wallet</h2>
             <p className="text-text-secondary">Connect your wallet to see your published skills.</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mb-8">
+            <p className="text-error text-sm">{error}</p>
+            <button type="button" onClick={() => setError(null)} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
           </div>
         )}
 
@@ -219,10 +230,18 @@ export default function SkillsPage() {
 
                     <div className="flex justify-between items-center mt-6">
                       {isOwner ? (
-                        <button type="button" onClick={() => handleDelete(skill.id)}
-                          className="text-xs text-text-tertiary hover:text-error transition-colors uppercase tracking-widest">
-                          Delete
-                        </button>
+                        deletingId === skill.id ? (
+                          <div className="flex items-center gap-4 text-xs">
+                            <span className="text-text-secondary">Delete this skill?</span>
+                            <button type="button" onClick={() => confirmDelete(skill.id)} className="text-error font-bold uppercase tracking-widest">Confirm</button>
+                            <button type="button" onClick={() => setDeletingId(null)} className="text-text-tertiary uppercase tracking-widest">Cancel</button>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => setDeletingId(skill.id)}
+                            className="text-xs text-text-tertiary hover:text-error transition-colors uppercase tracking-widest">
+                            Delete
+                          </button>
+                        )
                       ) : <div />}
                       <Link
                         href={`/skills/${skill.id}`}

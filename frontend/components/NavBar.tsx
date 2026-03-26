@@ -37,11 +37,9 @@ export function NavBar() {
             Riverting
           </Link>
           <div className="hidden md:flex gap-8">
-            {navLink('/skills', 'Skills', pathname === '/skills' || (pathname?.startsWith('/skills/') ?? false))}
-            {navLink('/upload', 'Upload Skill', pathname === '/upload')}
-            {navLink('/marketplace', 'Browse Agents', pathname === '/marketplace')}
-            {navLink('/sessions', 'My Sessions', pathname?.startsWith('/sessions') ?? false)}
-            {navLink('/curator', 'Upload Agent', pathname?.startsWith('/curator') ?? false)}
+            {navLink('/skills', 'Skills', pathname === '/skills' || (pathname?.startsWith('/skills/') ?? false) || pathname === '/upload')}
+            {navLink('/marketplace', 'Agents', pathname === '/marketplace' || (pathname?.startsWith('/curator') ?? false) || (pathname?.startsWith('/marketplace') ?? false))}
+            {navLink('/sessions', 'Sessions', (pathname?.startsWith('/sessions') ?? false) || (pathname?.startsWith('/session') ?? false))}
             {navLink('/settings', 'Settings', pathname?.startsWith('/settings') ?? false)}
           </div>
         </div>
@@ -51,11 +49,9 @@ export function NavBar() {
       {isMobileMenuOpen && (
         <div className="md:hidden border-t border-border-subtle bg-surface-dim">
           <div className="flex flex-col px-4 sm:px-8 py-4 gap-6">
-            {navLink('/skills', 'Skills', pathname === '/skills' || (pathname?.startsWith('/skills/') ?? false))}
-            {navLink('/upload', 'Upload Skill', pathname === '/upload')}
-            {navLink('/marketplace', 'Browse Agents', pathname === '/marketplace')}
-            {navLink('/sessions', 'My Sessions', pathname?.startsWith('/sessions') ?? false)}
-            {navLink('/curator', 'Upload Agent', pathname?.startsWith('/curator') ?? false)}
+            {navLink('/skills', 'Skills', pathname === '/skills' || (pathname?.startsWith('/skills/') ?? false) || pathname === '/upload')}
+            {navLink('/marketplace', 'Agents', pathname === '/marketplace' || (pathname?.startsWith('/curator') ?? false) || (pathname?.startsWith('/marketplace') ?? false))}
+            {navLink('/sessions', 'Sessions', (pathname?.startsWith('/sessions') ?? false) || (pathname?.startsWith('/session') ?? false))}
             {navLink('/settings', 'Settings', pathname?.startsWith('/settings') ?? false)}
           </div>
         </div>
