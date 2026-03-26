@@ -1,13 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useAccount, useChainId, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { useSignMessage } from 'wagmi'
 import { parseUnits, formatUnits, maxUint256 } from 'viem'
 import { fetchBalance, depositFunds } from '@/lib/agents-api'
 import { signAction } from '@/lib/sign-action'
-
-const USDC_ADDRESS = '0x74b7F16337b8972027F6196A17a631aC6dE26d22' as const
-const ESCROW_ADDRESS = '0x93e2794E042b6326356768B7CfDeFc871008239e' as const
+import { getNetworkConfig } from '@/lib/networks'
 
 const ERC20_ABI = [
   {
@@ -38,6 +36,8 @@ const DEPOSIT_PRESETS = [5, 10, 20, 50]
 
 export default function SettingsPage() {
   const { address, isConnected } = useAccount()
+  const chainId = useChainId()
+  const { usdcAddress: USDC_ADDRESS, escrowAddress: ESCROW_ADDRESS, label: networkLabel, explorerUrl } = getNetworkConfig(chainId)  // eslint-disable-line
   const { signMessageAsync } = useSignMessage()
   const [approveAmount, setApproveAmount] = useState('100')
   const [depositAmount, setDepositAmount] = useState('10')
@@ -354,7 +354,7 @@ export default function SettingsPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-text-secondary uppercase tracking-widest">Network</span>
-                      <span className="text-text-tertiary">X Layer Testnet (1952)</span>
+                      <a href={explorerUrl} target="_blank" rel="noreferrer" className="text-text-tertiary hover:text-accent transition-colors">{networkLabel} ({chainId})</a>
                     </div>
                   </div>
                 </div>

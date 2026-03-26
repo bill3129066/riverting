@@ -78,13 +78,13 @@ export async function fetchAgentExecutions(id: string, wallet?: string): Promise
 }
 
 // Billing
-export async function fetchBalance(wallet: string): Promise<{ balance: number }> {
+export async function fetchBalance(wallet: string): Promise<{ wallet: string; balance: number; total_deposited: number; total_spent: number }> {
   const res = await fetch(`${API}/api/agents/billing/balance?wallet=${wallet}`)
   if (!res.ok) throw new Error('Failed to fetch balance')
   return res.json()
 }
 
-export async function depositFunds(amount: number, auth: AuthHeaders): Promise<{ balance: number }> {
+export async function depositFunds(amount: number, auth: AuthHeaders): Promise<{ wallet: string; balance: number; total_deposited: number; total_spent: number }> {
   const res = await fetch(`${API}/api/agents/billing/deposit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...auth },
@@ -171,5 +171,89 @@ export async function stopSession(id: string, auth: AuthHeaders): Promise<void> 
 export async function fetchSessions(wallet: string): Promise<any[]> {
   const res = await fetch(`${API}/api/sessions?wallet=${wallet}`)
   if (!res.ok) throw new Error('Failed to fetch sessions')
+  return res.json()
+}
+
+// ─── Skill aliases (agents and skills are unified) ───────────
+
+export const fetchSkill = fetchAgent
+export const deleteSkill = deleteAgent
+export const rateSkill = rateAgent
+export const fetchSkillExecutions = fetchAgentExecutions
+
+export async function runSkill(id: string, inputs: Record<string, unknown>, auth: AuthHeaders): Promise<any> {
+  const res = await fetch(`${API}/api/agents/${id}/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify({ inputs }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to run agent')
+  }
+  return res.json()
+}
+
+export async function runSkillStream(
+  id: string,
+  inputs: Record<string, unknown>,
+  auth: AuthHeaders,
+  onChunk: (text: string) => void,
+  onComplete: (stats: { executionId: string; durationMs: number; tokensUsed: number | null; toolCallCount?: number }) => void,
+  onError: (error: string) => void,
+  onToolUse?: (calls: Array<{ name: string; args: unknown }>) => void,
+  onToolResult?: (results: Array<{ name: string; hasError: boolean }>, totalCalls: number) => void,
+): Promise<void> {
+  const res = await fetch(`${API}/api/agents/${id}/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify({ inputs }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to start stream')
+  }
+  const reader = res.body?.getReader()
+  if (!reader) throw new Error('No response body')
+  const decoder = new TextDecoder()
+  let buffer = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+    let currentEvent = ''
+    for (const line of lines) {
+      if (line.startsWith('event: ')) currentEvent = line.slice(7)
+      else if (line.startsWith('data: ')) {
+        const data = JSON.parse(line.slice(6))
+        if (currentEvent === 'chunk') onChunk(data.text)
+        else if (currentEvent === 'complete') onComplete(data)
+        else if (currentEvent === 'error') onError(data.error)
+        else if (currentEvent === 'tool_use' && onToolUse) onToolUse(data.calls)
+        else if (currentEvent === 'tool_result' && onToolResult) onToolResult(data.results, data.totalCalls)
+      }
+    }
+  }
+}
+
+export async function chatWithSkill(
+  id: string,
+  message: string,
+  history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
+  inputs: Record<string, unknown>,
+  auth?: AuthHeaders,
+): Promise<{ reply: string; tokensUsed: number | null; toolCallCount: number }> {
+  const endpoint = auth ? `${API}/api/agents/${id}/chat` : `${API}/api/agents/${id}/chat-demo`
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(auth ?? {}) },
+    body: JSON.stringify({ message, history, inputs }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to chat with agent')
+  }
   return res.json()
 }

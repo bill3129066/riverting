@@ -6,9 +6,9 @@ export function buildSignMessage(wallet: string, action: string, resourceId?: st
 }
 
 export interface SignedHeaders {
-  'X-Wallet-Address': string
-  'X-Signature': string
-  'X-Timestamp': string
+  'x-wallet-address': string
+  'x-signature': string
+  'x-timestamp': string
 }
 
 export async function signAction(
@@ -20,8 +20,8 @@ export async function signAction(
   const { message, timestamp } = buildSignMessage(wallet, action, resourceId)
   const signature = await signMessageAsync({ message })
   return {
-    'X-Wallet-Address': wallet,
-    'X-Signature': signature,
-    'X-Timestamp': String(timestamp),
+    'x-wallet-address': wallet,
+    'x-signature': signature,
+    'x-timestamp': String(timestamp),
   }
 }
