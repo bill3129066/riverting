@@ -68,6 +68,10 @@ export default function AgentDetailPage() {
     try {
       const auth = await signAction(signMessageAsync, address, 'create-session')
       const session = await createSession(agent.id, inputs, auth)
+      const queryText = inputs._query || inputs.query || Object.values(inputs).join(' ')
+      if (queryText) {
+        sessionStorage.setItem(`session_query_${session.id}`, queryText)
+      }
       router.push(`/sessions/${session.id}`)
     } catch (e: any) {
       setError(e.message || 'Failed to start session')

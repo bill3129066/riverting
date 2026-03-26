@@ -42,7 +42,9 @@ export default function SessionPage() {
   const [steps, setSteps] = useState<AgentStep[]>([])
   const [proofs, setProofs] = useState<ProofEvent[]>([])
   const [accrued, setAccrued] = useState(0)
-  const [ratePerSec] = useState(1300)
+  const [ratePerSec, setRatePerSec] = useState(0)
+  const [curatorRate, setCuratorRate] = useState(0)
+  const [platformFee, setPlatformFee] = useState(0)
   
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
     if (typeof window === 'undefined') return []
@@ -68,13 +70,25 @@ export default function SessionPage() {
 
   const chatBottomRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+  const initialQuerySentRef = useRef(false)
   const isValidSession = !!id && id !== 'new'
 
   useEffect(() => {
     if (!isValidSession) {
       router.replace('/marketplace')
+      return
     }
-  }, [isValidSession, router])
+
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+    fetch(`${apiBase}/api/sessions/${id}`)
+      .then(r => r.json())
+      .then((session: any) => {
+        if (session.total_rate) setRatePerSec(session.total_rate)
+        if (session.curator_rate) setCuratorRate(session.curator_rate)
+        if (session.platform_fee) setPlatformFee(session.platform_fee)
+      })
+      .catch(() => {})
+  }, [isValidSession, id, router])
 
   useEffect(() => {
     if (!isValidSession || status !== 'active') return
@@ -91,6 +105,31 @@ export default function SessionPage() {
     const connect = () => {
       const es = new EventSource(`${apiBase}/api/sessions/${id}/stream`)
       eventSourceRef.current = es
+
+      es.addEventListener('connected', () => {
+        if (initialQuerySentRef.current) return
+        const storageKey = `session_query_${id}`
+        const initialQuery = sessionStorage.getItem(storageKey)
+        if (!initialQuery) return
+        initialQuerySentRef.current = true
+        sessionStorage.removeItem(storageKey)
+
+        setChatHistory(prev => {
+          if (prev.some(m => m.role === 'user')) return prev
+          return [{ id: crypto.randomUUID(), role: 'user', text: initialQuery }]
+        })
+        setChatLoading(true)
+
+        chatInSession(id, initialQuery, [])
+          .then(({ reply, toolCallCount: tc }) => {
+            setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role: 'model', text: reply }])
+            if (tc) setToolCallCount(prev => prev + tc)
+          })
+          .catch((err) => {
+            setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role: 'model', text: `Error: ${err.message}` }])
+          })
+          .finally(() => setChatLoading(false))
+      })
 
       es.addEventListener('step', (e) => {
         const step = JSON.parse(e.data)
@@ -242,7 +281,7 @@ export default function SessionPage() {
       <div className="grid grid-cols-12 gap-8 items-start">
         <div className="col-span-3 space-y-8">
           <SalaryTicker accrued={accrued} ratePerSec={ratePerSec} status={status} />
-          <CostBreakdown curatorRate={1000} platformFee={300} />
+          <CostBreakdown curatorRate={curatorRate} platformFee={platformFee} />
         </div>
 
         <div className="col-span-6 h-full min-h-[40rem]">
@@ -336,11 +375,11 @@ export default function SessionPage() {
               <div className="text-text-secondary uppercase tracking-widest text-xs">Total Charged</div>
             </div>
             <div className="p-12">
-              <div className="text-4xl font-display font-bold text-text-primary mb-2">${(accrued * 1000 / 1300 / 1_000_000).toFixed(4)}</div>
+              <div className="text-4xl font-display font-bold text-text-primary mb-2">${(ratePerSec > 0 ? accrued * curatorRate / ratePerSec / 1_000_000 : 0).toFixed(4)}</div>
               <div className="text-text-secondary uppercase tracking-widest text-xs">Curator Payout</div>
             </div>
             <div className="p-12">
-              <div className="text-4xl font-display font-bold text-text-primary mb-2">${(accrued * 300 / 1300 / 1_000_000).toFixed(4)}</div>
+              <div className="text-4xl font-display font-bold text-text-primary mb-2">${(ratePerSec > 0 ? accrued * platformFee / ratePerSec / 1_000_000 : 0).toFixed(4)}</div>
               <div className="text-text-secondary uppercase tracking-widest text-xs">Platform Fee</div>
             </div>
           </div>

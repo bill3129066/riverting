@@ -170,7 +170,7 @@ function stopSessionInternal(session: ActiveSession): void {
 export function startSession(
   agentId: string,
   userWallet: string,
-  _inputs?: Record<string, string>,
+  inputs?: Record<string, string>,
 ): { sessionId: string } {
   const db = getDb()
 
@@ -281,6 +281,8 @@ export async function chatInSession(
     session.userWallet,
     message,
     history,
+    {},
+    (step) => sseHub.emitStep(sessionId, step),
   )
 
   return { reply: result.reply, toolCallCount: result.toolCallCount }
