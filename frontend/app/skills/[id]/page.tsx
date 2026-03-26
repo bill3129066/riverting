@@ -8,7 +8,7 @@ import {
   fetchSkill, runSkill, runSkillStream, chatWithSkill,
   fetchSkillExecutions, deleteSkill, fetchBalance, depositFunds,
   rateSkill as rateSkillApi, fetchUserRating,
-} from '@/lib/skills-api'
+} from '@/lib/agents-api'
 import { signAction } from '@/lib/sign-action'
 
 interface Skill {

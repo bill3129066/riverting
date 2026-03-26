@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { useSignMessage } from 'wagmi'
 import { parseUnits, formatUnits, maxUint256 } from 'viem'
-import { fetchBalance, depositFunds } from '@/lib/skills-api'
+import { fetchBalance, depositFunds } from '@/lib/agents-api'
 import { signAction } from '@/lib/sign-action'
 
 const USDC_ADDRESS = '0x74b7F16337b8972027F6196A17a631aC6dE26d22' as const
