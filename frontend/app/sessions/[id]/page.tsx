@@ -66,6 +66,7 @@ export default function SessionPage() {
   const [ratingHover, setRatingHover] = useState(0)
   const [ratingSubmitted, setRatingSubmitted] = useState(false)
   const sessionStartRef = useRef(Date.now())
+  const sessionEndRef = useRef<number | null>(null)
   
   const [toolCallCount, setToolCallCount] = useState(0)
   interface ToolActivityItem {
@@ -98,6 +99,9 @@ export default function SessionPage() {
         }
         if (session.started_at) {
           sessionStartRef.current = new Date(session.started_at).getTime()
+        }
+        if (session.ended_at) {
+          sessionEndRef.current = new Date(session.ended_at).getTime()
         }
       })
       .catch(() => {})
@@ -220,6 +224,7 @@ export default function SessionPage() {
       const auth = await signAction(signMessageAsync, address, 'stop-session', id)
       await stopSession(id, auth)
       setStatus('stopped')
+      sessionEndRef.current = Date.now()
       eventSourceRef.current?.close()
       setShowReview(true)
     } catch (e: any) {
@@ -230,7 +235,8 @@ export default function SessionPage() {
   }
 
   const sessionDuration = () => {
-    const secs = Math.floor((Date.now() - sessionStartRef.current) / 1000)
+    const end = sessionEndRef.current ?? Date.now()
+    const secs = Math.floor((end - sessionStartRef.current) / 1000)
     const m = Math.floor(secs / 60)
     const s = secs % 60
     if (m === 0) return `${s}s`
