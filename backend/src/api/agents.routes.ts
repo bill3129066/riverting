@@ -3,10 +3,11 @@ import {
   listAgents, getAgentById, createAgent, updateAgent, deactivateAgent,
   rateAgent, getUserRating, getAgentStats,
 } from '../services/agent/agentRegistry.js'
-import { getExecutionsByAgent } from '../services/agent/agentExecutor.js'
+import { getExecutionsByAgent, chatWithAgent } from '../services/agent/agentExecutor.js'
 import { getBalance, deposit } from '../services/session/billingService.js'
 import { compressSkillPrompt, compressPattern } from '../services/skill/skillCompressor.js'
 import { requireSignature } from '../middleware/verifySignature.js'
+import { rateLimiter } from '../middleware/rateLimit.js'
 
 export const agentsRoutes = new Hono()
 
@@ -148,6 +149,52 @@ agentsRoutes.delete('/:id',
     const wallet: string = c.get('verifiedWallet')
     deactivateAgent(c.req.param('id'), wallet)
     return c.json({ success: true })
+  },
+)
+
+// Chat with agent — demo mode (no auth)
+agentsRoutes.post('/:id/chat-demo',
+  rateLimiter({ maxRequests: 30, windowMs: 60_000 }),
+  async (c) => {
+    const body = await c.req.json()
+    const { message, history, inputs } = body
+
+    if (!message || typeof message !== 'string') {
+      return c.json({ error: 'message string required' }, 400)
+    }
+
+    try {
+      const result = await chatWithAgent(
+        c.req.param('id'), 'demo-user', message, history || [], inputs || {},
+      )
+      return c.json(result)
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 400)
+    }
+  },
+)
+
+// Chat with agent — authenticated mode
+agentsRoutes.post('/:id/chat',
+  requireSignature('run-skill'),
+  rateLimiter({ maxRequests: 30, windowMs: 60_000 }),
+  async (c) => {
+    const wallet: string = c.get('verifiedWallet')
+    const body = await c.req.json()
+    const { message, history, inputs } = body
+
+    if (!message || typeof message !== 'string') {
+      return c.json({ error: 'message string required' }, 400)
+    }
+
+    try {
+      const result = await chatWithAgent(
+        c.req.param('id'), wallet, message, history || [], inputs || {},
+      )
+      return c.json(result)
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 400)
+    }
   },
 )
 
