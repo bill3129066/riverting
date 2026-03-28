@@ -283,11 +283,11 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-2 border-x border-b border-border-subtle bg-surface-dim">
                   <div className="px-8 py-4 border-r border-border-subtle flex justify-between items-center text-sm">
                     <span className="text-text-secondary">Total deposited</span>
-                    <span className="font-mono text-text-primary">${(platformBalance.total_deposited / 1_000_000).toFixed(4)}</span>
+                    <span className="font-mono text-text-primary">${((platformBalance.total_deposited ?? 0) / 1_000_000).toFixed(4)}</span>
                   </div>
                   <div className="px-8 py-4 flex justify-between items-center text-sm">
                     <span className="text-text-secondary">Total spent</span>
-                    <span className="font-mono text-text-primary">${(platformBalance.total_spent / 1_000_000).toFixed(4)}</span>
+                    <span className="font-mono text-text-primary">${((platformBalance.total_spent ?? 0) / 1_000_000).toFixed(4)}</span>
                   </div>
                 </div>
               )}
