@@ -211,8 +211,11 @@ export default function SessionPage() {
       })
 
       es.addEventListener('error', (e) => {
-        const { error } = JSON.parse(e.data)
-        setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role: 'model', text: `Error: ${error}` }])
+        const me = e as MessageEvent
+        if (me.data) {
+          const { error } = JSON.parse(me.data)
+          setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role: 'model', text: `Error: ${error}` }])
+        }
         setChatLoading(false)
       })
 
