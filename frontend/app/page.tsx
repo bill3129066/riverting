@@ -92,7 +92,7 @@ export default function HomePage() {
         <div className="grid grid-cols-2 md:grid-cols-4 border border-border-subtle divide-y md:divide-y-0 md:divide-x divide-border-subtle">
           {[
             { label: 'Proof Interval', value: '3-5s', subtitle: 'On-chain heartbeat' },
-            { label: 'Minimum', value: '$0.001', subtitle: 'Per query' },
+            { label: 'Minimum', value: '$0.0001', subtitle: 'Per second' },
             { label: 'Gas Costs', value: '< $0.001', subtitle: 'X Layer efficiency' },
             { label: 'Settlement', value: 'Instant', subtitle: 'Trustless escrow' },
           ].map((stat) => (
