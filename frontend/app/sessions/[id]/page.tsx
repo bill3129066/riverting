@@ -127,13 +127,7 @@ export default function SessionPage() {
       .catch(() => {})
   }, [isValidSession, id, router])
 
-  useEffect(() => {
-    if (!isValidSession || status !== 'active') return
-    const interval = setInterval(() => {
-      setAccrued(prev => prev + ratePerSec)
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [isValidSession, status, ratePerSec])
+  // accrued is updated exclusively by SSE 'earnings' events — no client-side interval
 
   useEffect(() => {
     if (!isValidSession) return

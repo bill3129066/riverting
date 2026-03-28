@@ -40,7 +40,7 @@ export default function SalaryTicker({ accrued, ratePerSec, status }: {
 
   return (
     <div className="border border-border-subtle p-8 bg-surface-elevated">
-      <p className="text-text-tertiary text-xs uppercase tracking-widest mb-4">Total Earned</p>
+      <p className="text-text-tertiary text-xs uppercase tracking-widest mb-4">Session Cost</p>
       <div 
         className={`text-6xl font-display font-bold transition-colors ${
           status === 'active' ? 'text-accent' : 'text-text-tertiary'
