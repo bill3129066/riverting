@@ -88,7 +88,7 @@ const MOCK_STEPS = [
   { kind: 'api', title: 'Initializing', body: 'Loading agent configuration and skill pack...' },
   { kind: 'metric', title: 'RPC Connected', body: 'Established connection to X Layer RPC endpoint' },
   { kind: 'rpc', title: 'Chain Sync', body: 'Fetched latest block height — chain is healthy' },
-  { kind: 'api', title: 'Model Ready', body: 'Gemini 2.0 Flash loaded with tool-use context' },
+  { kind: 'api', title: 'Model Ready', body: 'Gemini 3.1 Pro loaded with tool-use context' },
   { kind: 'commentary', title: 'Monitoring', body: 'Agent is active and awaiting instructions via chat' },
   { kind: 'metric', title: 'Heartbeat OK', body: 'Proof liveness loop running — on-chain anchoring active' },
   { kind: 'finding', title: 'Status', body: 'All subsystems nominal — streaming salary accruing' },
