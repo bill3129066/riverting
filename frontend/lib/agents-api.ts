@@ -123,17 +123,16 @@ export async function createSession(agentId: string, inputs: Record<string, stri
   return res.json()
 }
 
-export async function chatInSession(sessionId: string, message: string, history: any[], auth?: AuthHeaders): Promise<{ reply: string; toolCallCount: number }> {
+export async function chatInSession(sessionId: string, message: string, history: any[], auth?: AuthHeaders): Promise<void> {
   const res = await fetch(`${API}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(auth ?? {}) },
     body: JSON.stringify({ message, history }),
   })
-  if (!res.ok) {
+  if (!res.ok && res.status !== 202) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err.error || 'Failed to chat in session')
   }
-  return res.json()
 }
 
 export async function pauseSession(id: string, auth: AuthHeaders): Promise<void> {

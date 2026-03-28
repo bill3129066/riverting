@@ -113,12 +113,14 @@ sessionsRoutes.post(
     }
 
     try {
-      const { reply, toolCallCount } = await chatInSession(
+      chatInSession(
         sessionId,
         body.message,
         body.history ?? [],
-      )
-      return c.json({ reply, toolCallCount })
+      ).catch((e: any) => {
+        sseHub.emitError(sessionId, e.message || 'Chat failed')
+      })
+      return c.json({ status: 'processing' }, 202)
     } catch (e: any) {
       const status = e.message?.includes('not found') ? 404 : 400
       return c.json({ error: e.message }, status)

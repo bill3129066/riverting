@@ -160,14 +160,10 @@ export default function SessionPage() {
         setChatLoading(true)
 
         chatInSession(id, initialQuery, [])
-          .then(({ reply, toolCallCount: tc }) => {
-            setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role: 'model', text: reply }])
-            if (tc) setToolCallCount(prev => prev + tc)
-          })
           .catch((err) => {
             setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role: 'model', text: `Error: ${err.message}` }])
+            setChatLoading(false)
           })
-          .finally(() => setChatLoading(false))
       })
 
       es.addEventListener('step', (e) => {
@@ -303,24 +299,9 @@ export default function SessionPage() {
         parts: [{ text: m.text }],
       }))
 
-      const { reply, toolCallCount: newToolCount } = await chatInSession(id, text, geminiHistory)
-
-      setChatHistory(prev => {
-        const next = [...prev]
-        if (next.length > 0 && next[next.length - 1].role === 'model') {
-          next[next.length - 1].text = reply || next[next.length - 1].text
-        } else if (reply) {
-          next.push({ id: crypto.randomUUID(), role: 'model', text: reply })
-        }
-        return next
-      })
-
-      if (newToolCount) {
-        setToolCallCount(prev => prev + newToolCount)
-      }
+      await chatInSession(id, text, geminiHistory)
     } catch (e: any) {
       setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role: 'model', text: `Failed to reach AI: ${e.message}` }])
-    } finally {
       setChatLoading(false)
     }
   }
