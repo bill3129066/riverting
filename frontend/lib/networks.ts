@@ -47,10 +47,9 @@ export const NETWORK_CONFIGS: Record<number, NetworkConfig> = {
     explorerUrl:   'https://www.oklink.com/xlayer-test',
     label: 'X Layer Testnet',
   },
-  // X Layer Mainnet (addresses TBD — update after deployment)
   [xlayerMainnet.id]: {
-    usdcAddress:   '0x74b7F16337b8972027F6196A17a631aC6dE26d22', // placeholder
-    escrowAddress: '0x0000000000000000000000000000000000000000', // placeholder
+    usdcAddress:   '0x74b7F16337b8972027F6196A17a631aC6dE26d22',
+    escrowAddress: '0x1fE2371012FB887AdC5f7280aE69a6FCC522dde7',
     explorerUrl:   'https://www.oklink.com/xlayer',
     label: 'X Layer',
   },
@@ -58,5 +57,5 @@ export const NETWORK_CONFIGS: Record<number, NetworkConfig> = {
 
 /** Returns the config for the currently connected chain, falling back to testnet. */
 export function getNetworkConfig(chainId: number | undefined): NetworkConfig {
-  return NETWORK_CONFIGS[chainId ?? xlayerTestnet.id] ?? NETWORK_CONFIGS[xlayerTestnet.id]
+  return NETWORK_CONFIGS[chainId ?? xlayerMainnet.id] ?? NETWORK_CONFIGS[xlayerMainnet.id]
 }

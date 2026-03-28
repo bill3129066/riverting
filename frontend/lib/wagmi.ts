@@ -1,13 +1,13 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit'
-import { xlayerTestnet } from './networks'
+import { xlayerMainnet } from './networks'
 
-export { xlayerTestnet as xlayer } from './networks'
+export { xlayerMainnet as xlayer } from './networks'
 
 export function createWagmiConfig() {
   return getDefaultConfig({
     appName: 'Riverting',
     projectId: 'riverting-hackathon',
-    chains: [xlayerTestnet],
+    chains: [xlayerMainnet],
     ssr: true,
   })
 }
