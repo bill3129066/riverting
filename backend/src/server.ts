@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { serve } from '@hono/node-server';
 import { agentsRoutes } from './api/agents.routes.js';
 import { sessionsRoutes } from './api/sessions.routes.js';
 import { curatorRoutes } from './api/curator.routes.js';
@@ -36,12 +35,16 @@ app.route('/api/queries', queriesRoutes);
 app.route('/queries', queriesRoutes);
 
 const port = parseInt(process.env.PORT || '3001');
-serve({ fetch: app.fetch, port }, async () => {
-  console.log(`Backend running on http://localhost:${port}`);
-  eventWatcher.start();
-  await proofRelayer.start();
-  timeoutWatcher.start();
-  sseHub.startPingLoop();
+
+const server = Bun.serve({
+  fetch: app.fetch,
+  port,
 });
+
+console.log(`Backend running on http://localhost:${server.port}`);
+eventWatcher.start();
+proofRelayer.start();
+timeoutWatcher.start();
+sseHub.startPingLoop();
 
 export { app };

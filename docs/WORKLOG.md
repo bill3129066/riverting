@@ -5,7 +5,38 @@
 
 ---
 
-## 2026-03-28 — Backend Deployment (GCE + Cloudflare Tunnel)
+## 2026-03-28 — SSE Fix: Vercel Rewrites (replacing Cloudflare Tunnel)
+
+### Problem
+
+Cloudflare Quick Tunnel buffers SSE (Server-Sent Events) streaming responses — confirmed via A/B test (0 bytes through tunnel vs 136 bytes direct on VM). Root cause: CF Quick Tunnel issue [#1449](https://github.com/cloudflare/cloudflared/issues/1449). Non-streaming API calls worked fine.
+
+### Fix
+
+Replaced Cloudflare Tunnel with **Vercel Rewrites** as reverse proxy:
+
+- `next.config.js` rewrites `/api/*` → `http://<VM-IP>:3001/api/*`
+- Browser makes same-origin requests to Vercel (no CORS, HTTPS handled by Vercel)
+- Vercel edge proxies server-to-server to the VM (HTTP, no HTTPS needed)
+- SSE streams pass through without buffering
+
+Also switched backend from `@hono/node-server` → native `Bun.serve()` (not the root cause, but correct for Bun runtime).
+
+### Vercel Env Vars (new)
+
+| Var | Value | Purpose |
+|-----|-------|---------|
+| `NEXT_PUBLIC_API_URL` | *(empty string)* | Makes frontend use relative URLs → goes through rewrites |
+| `BACKEND_URL` | `http://<VM-IP>:3001` | Used by next.config.js rewrites at build time |
+
+### Removed
+
+- `cloudflared-tunnel.service` — stopped and disabled on VM
+- `cloudflared` is no longer needed
+
+---
+
+## 2026-03-28 — Backend Deployment (GCE)
 
 ### Goal
 
@@ -18,7 +49,7 @@ Deploy backend (Hono + Bun + SQLite) to GCP so the Vercel frontend can talk to i
 | Frontend | Vercel | Next.js native, zero config |
 | Backend | GCE e2-micro | Free tier, SQLite stays as-is, zero code changes |
 | Database | SQLite (on VM) | Already works, init.ts seeds demo data |
-| HTTPS | Cloudflare Quick Tunnel | No domain needed, auto HTTPS, free |
+| HTTPS | Vercel Rewrites (was: Cloudflare Tunnel) | Same-origin proxy, SSE works, no domain needed |
 
 **Alternatives considered & rejected:**
 - **Cloud Run** — SQLite is ephemeral on container restart. Would need DB migration or accept data loss.
@@ -51,12 +82,11 @@ Deploy backend (Hono + Bun + SQLite) to GCP so the Vercel frontend can talk to i
    - `bun install` in backend/ (20 packages, 1.3s)
    - `bun run src/db/init.ts` — seeded 17 skills + 2 agents
 
-5. **Systemd services** (auto-restart + boot-start)
+5. **Systemd service** (auto-restart + boot-start)
    - `riverting-backend.service` — runs `bun run src/server.ts` with env from `.env`
-   - `cloudflared-tunnel.service` — Quick Tunnel to localhost:3001
 
 6. **Verification**
-   - Health check: `{"status":"ok"}` via both direct IP and tunnel
+   - Health check: `{"status":"ok"}` via direct IP
    - API test: `/api/agents` returns full agent list
    - Memory: 461MB/955MB + 2GB swap available
 
@@ -68,16 +98,8 @@ Deploy backend (Hono + Bun + SQLite) to GCP so the Vercel frontend can talk to i
 | VM Name | `riverting-backend` |
 | Zone | `us-central1-a` |
 | External IP | *(see GCP Console)* |
-| Tunnel URL | *(see `journalctl -u cloudflared-tunnel \| grep trycloudflare`)* |
 | Backend Port | 3001 |
 | DB File | `~/riverting/backend/demo.db` |
-
-### Vercel Frontend Config
-
-Set this env var on Vercel:
-```
-NEXT_PUBLIC_API_URL=https://<your-tunnel-subdomain>.trycloudflare.com
-```
 
 ### Operations Cheatsheet
 
@@ -87,29 +109,17 @@ gcloud compute ssh riverting-backend --zone=us-central1-a
 
 # Check service status
 sudo systemctl status riverting-backend
-sudo systemctl status cloudflared-tunnel
 
 # View logs
 journalctl -u riverting-backend -f
-journalctl -u cloudflared-tunnel -f
-
-# Get current tunnel URL (changes on restart)
-journalctl -u cloudflared-tunnel | grep trycloudflare
 
 # Update code
 cd ~/riverting && git pull && cd backend && bun install
 sudo systemctl restart riverting-backend
-
-# Restart tunnel (will get new URL — update Vercel env var)
-sudo systemctl restart cloudflared-tunnel
-
-# Full restart
-sudo systemctl restart riverting-backend cloudflared-tunnel
 ```
 
 ### Known Limitations
 
-1. **Quick Tunnel URL is ephemeral** — changes if cloudflared restarts or VM reboots. Must update Vercel `NEXT_PUBLIC_API_URL` when it changes.
-2. **SSE may be buffered** — Cloudflare Quick Tunnel can buffer HTTP streaming responses. If streaming salary / live agent timeline is laggy, switch to DuckDNS + Caddy for native HTTPS.
-3. **SQLite is local** — no replication, no backup. If VM disk dies, re-run `bun run src/db/init.ts` to re-seed.
-4. **e2-micro is weak** — 1GB RAM. Fine for demo with a few concurrent users. Will OOM under heavy load.
+1. **SQLite is local** — no replication, no backup. If VM disk dies, re-run `bun run src/db/init.ts` to re-seed.
+2. **e2-micro is weak** — 1GB RAM. Fine for demo with a few concurrent users. Will OOM under heavy load.
+3. **Vercel Rewrites may have timeouts** — Vercel Hobby plan may timeout long-lived SSE connections. Auto-reconnect in frontend handles this.

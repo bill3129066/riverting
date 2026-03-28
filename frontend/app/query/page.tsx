@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { fetchAgents } from '@/lib/api'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 const QUERY_TYPES = [
   { id: 'summary', label: 'Analysis Summary', price: '$0.001', description: 'Brief overview of recent analysis' },

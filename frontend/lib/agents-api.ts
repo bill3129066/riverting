@@ -1,4 +1,4 @@
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 import type { SignedHeaders as AuthHeaders } from './sign-action'
 export type { AuthHeaders }

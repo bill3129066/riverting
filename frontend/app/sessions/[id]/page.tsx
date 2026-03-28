@@ -102,7 +102,7 @@ export default function SessionPage() {
       return
     }
 
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     fetch(`${apiBase}/api/sessions/${id}`)
       .then(r => r.json())
       .then((session: any) => {
@@ -133,7 +133,7 @@ export default function SessionPage() {
 
   useEffect(() => {
     if (!isValidSession) return
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
     const connect = () => {
       const es = new EventSource(`${apiBase}/api/sessions/${id}/stream`)
