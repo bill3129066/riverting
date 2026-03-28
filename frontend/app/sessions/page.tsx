@@ -44,11 +44,11 @@ export default function SessionsPage() {
 
   return (
     <div className="bg-background min-h-screen text-text-primary">
-      <div className="max-w-[1920px] mx-auto px-6 md:px-12 lg:px-24 pt-24 pb-32">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-24">
           <div>
-            <h1 className="font-display font-bold text-[5rem] leading-[0.95] tracking-tight mb-4">
+            <h1 className="font-display font-bold text-6xl leading-none tracking-tight mb-4">
               My Sessions
             </h1>
             <p className="font-display italic text-2xl text-text-secondary">

@@ -280,7 +280,7 @@ export default function UploadAgentPage() {
 
   return (
     <div className="min-h-screen bg-background text-text-primary">
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 py-24">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
         <div className="mb-16 border-b border-border-strong pb-8">
           <h1 className="font-display text-6xl font-bold tracking-tight mb-4">
             Upload Agent
@@ -387,8 +387,9 @@ export default function UploadAgentPage() {
             </div>
 
             {error && (
-              <div className="bg-surface-dim border border-error/50 text-error p-4 text-sm font-bold mt-8">
-                {error}
+              <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mt-8">
+                <p className="text-error text-sm">{error}</p>
+                <button type="button" onClick={() => setError('')} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
               </div>
             )}
 
@@ -533,8 +534,9 @@ export default function UploadAgentPage() {
             </div>
 
             {error && (
-              <div className="bg-surface-dim border border-error/50 text-error p-4 text-sm font-bold mt-8">
-                {error}
+              <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mt-8">
+                <p className="text-error text-sm">{error}</p>
+                <button type="button" onClick={() => setError('')} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
               </div>
             )}
 

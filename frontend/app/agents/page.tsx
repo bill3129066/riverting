@@ -45,7 +45,7 @@ export default function AgentsPage() {
 
   return (
     <div className="bg-background min-h-screen text-text-primary">
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 py-24">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24 items-end">
           <div className="md:col-span-1">
             <h1 className="font-display text-6xl font-bold text-text-primary leading-none">

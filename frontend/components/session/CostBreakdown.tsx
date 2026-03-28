@@ -6,7 +6,7 @@ export default function CostBreakdown({ curatorRate, platformFee }: {
 }) {
 
   return (
-    <div className="border border-border-subtle p-6 bg-surface-elevated">
+    <div className="border border-border-subtle p-8 bg-surface-elevated">
       <p className="text-text-tertiary text-xs uppercase tracking-widest mb-4">Cost Breakdown</p>
       <div className="text-sm">
         <div className="flex justify-between py-3 border-b border-border-subtle">

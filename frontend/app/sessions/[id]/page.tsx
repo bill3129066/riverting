@@ -316,7 +316,7 @@ export default function SessionPage() {
     <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
       <div className="flex items-end justify-between border-b border-border-strong pb-8 mb-16">
         <div>
-          <h1 className="text-[3rem] font-display italic leading-none mb-2">Live Session</h1>
+          <h1 className="text-5xl font-display italic leading-none mb-2">Live Session</h1>
           <p className="text-text-secondary text-lg font-mono">#{id}</p>
         </div>
         <StreamStatusBadge status={status} />

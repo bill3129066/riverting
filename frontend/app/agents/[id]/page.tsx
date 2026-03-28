@@ -99,14 +99,14 @@ export default function AgentDetailPage() {
   }
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-text-secondary font-display">Loading...</p></div>
-  if (error || !agent) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-red-400 font-display">{error || 'Agent not found'}</p></div>
+  if (error || !agent) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-error font-display">{error || 'Agent not found'}</p></div>
 
   const fields = parseInputSchema(agent.input_schema_json)
   const hasFields = fields.length > 0
 
   return (
     <div className="min-h-screen bg-background text-text-primary">
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 py-24">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
         {/* Header */}
         <div className="mb-16">
           <div className="flex items-center gap-3 mb-6">

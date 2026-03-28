@@ -76,9 +76,9 @@ export default function QueryPage() {
   const selectedAgentData = agents.find(a => a.id === selectedAgent)
 
   return (
-    <div className="max-w-[1920px] mx-auto px-24 pt-24 pb-32">
+    <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
       <div className="max-w-3xl mx-auto">
-        <h1 className="font-display font-bold text-[5rem] leading-none mb-6">Spot Query</h1>
+        <h1 className="font-display font-bold text-6xl leading-none mb-6">Spot Query</h1>
         <p className="font-display italic text-2xl text-text-secondary mb-16">Single-request agents. Pay per query. No subscriptions.</p>
 
         {error && (
@@ -89,7 +89,7 @@ export default function QueryPage() {
         )}
 
         <div className="border border-border-subtle bg-surface-elevated p-8 mb-12">
-          <label htmlFor="agent-select" className="block text-xs uppercase tracking-widest text-text-secondary mb-4">Select Agent</label>
+          <label htmlFor="agent-select" className="block text-xs uppercase tracking-widest font-bold text-text-secondary mb-3">Select Agent</label>
           {loadingAgents ? (
             <div className="animate-pulse h-12 bg-surface-dim w-full border border-border-subtle" />
           ) : (
@@ -107,7 +107,7 @@ export default function QueryPage() {
         </div>
 
         <div className="mb-12">
-          <h2 className="text-xs uppercase tracking-widest text-text-secondary mb-4">Query Type</h2>
+          <h2 className="text-xs uppercase tracking-widest font-bold text-text-secondary mb-3">Query Type</h2>
           <div className="flex flex-col border border-border-subtle bg-surface-elevated divide-y divide-border-subtle">
             {QUERY_TYPES.map(qt => (
               <button
@@ -132,7 +132,7 @@ export default function QueryPage() {
 
         {queryType === 'ask' && (
           <div className="mb-12">
-            <label htmlFor="question-input" className="block text-xs uppercase tracking-widest text-text-secondary mb-4">Question</label>
+            <label htmlFor="question-input" className="block text-xs uppercase tracking-widest font-bold text-text-secondary mb-3">Question</label>
             <input
               id="question-input"
               value={question}
@@ -147,7 +147,7 @@ export default function QueryPage() {
           <button
             type="button"
             onClick={handleQuery}
-            className="w-full bg-black text-white font-bold py-4 uppercase tracking-widest hover:bg-text-secondary transition-colors"
+            className="w-full bg-text-primary text-surface-elevated font-bold py-4 uppercase tracking-widest hover:bg-accent transition-colors"
           >
             Query for {selectedQueryType.price} →
           </button>
@@ -176,7 +176,7 @@ export default function QueryPage() {
             <button
               type="button"
               onClick={handlePay}
-              className="w-full bg-black text-white font-bold py-4 uppercase tracking-widest hover:bg-text-secondary transition-colors"
+              className="w-full bg-text-primary text-surface-elevated font-bold py-4 uppercase tracking-widest hover:bg-accent transition-colors"
             >
               Pay {selectedQueryType.price} USDC →
             </button>
@@ -185,7 +185,7 @@ export default function QueryPage() {
 
         {state === 'paying' && (
           <div className="border border-border-subtle p-12 bg-surface-elevated text-center mt-8">
-            <div className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+            <div className="w-12 h-12 border-2 border-accent border-t-transparent animate-spin mx-auto mb-6" />
             <p className="text-text-secondary uppercase tracking-widest text-sm">Processing payment on X Layer...</p>
           </div>
         )}

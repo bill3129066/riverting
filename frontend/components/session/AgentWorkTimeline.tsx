@@ -8,9 +8,9 @@ interface AgentStep {
 }
 
 const KIND_COLORS: Record<string, string> = {
-  api: 'text-blue-600',
-  rpc: 'text-purple-600',
-  metric: 'text-yellow-600',
+  api: 'text-accent',
+  rpc: 'text-text-primary',
+  metric: 'text-warning',
   commentary: 'text-text-secondary',
   finding: 'text-accent',
 }

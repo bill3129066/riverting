@@ -25,7 +25,7 @@ export default function StudioPage() {
 
   return (
     <div className="bg-background min-h-screen text-text-primary font-sans">
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 py-24">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
         
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 border-b border-border-strong pb-8">
           <div>

@@ -214,13 +214,13 @@ export default function SkillDetailPage() {
   }
 
   if (loading) return <div className="min-h-screen bg-background text-text-primary p-24"><p className="text-text-secondary uppercase tracking-widest text-xs">Loading...</p></div>
-  if (!skill) return <div className="min-h-screen bg-background text-text-primary p-24"><p className="text-error uppercase tracking-widest text-xs">Skill not found</p></div>
+  if (!skill) return <div className="min-h-screen bg-background text-text-primary p-24"><p className="text-error text-xs uppercase tracking-widest">Agent not found</p></div>
 
   const inputCls = 'w-full bg-surface-dim border border-border-subtle px-4 py-3 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none transition-colors'
 
   return (
     <div className="min-h-screen bg-background text-text-primary">
-      <div className="max-w-[1920px] mx-auto px-24 pt-24 pb-32">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
         {/* Header */}
         <div className="mb-16 border-b border-border-strong pb-8">
           <div className="flex items-center gap-4 mb-4">
@@ -231,7 +231,7 @@ export default function SkillDetailPage() {
             <span className="text-xs text-text-tertiary uppercase tracking-widest">{skill.run_count} runs</span>
             {skill.avg_rating && <span className="text-xs text-text-secondary uppercase tracking-widest">{'★'} {skill.avg_rating.toFixed(1)}</span>}
           </div>
-          <h1 className="text-[4rem] font-display font-bold leading-none mb-4">{skill.name}</h1>
+          <h1 className="text-6xl font-display font-bold leading-none mb-4">{skill.name}</h1>
           <p className="font-display italic text-2xl text-text-secondary mb-6">{skill.description}</p>
           <div className="flex items-center gap-4 text-xs uppercase tracking-widest text-text-tertiary">
             <p>
@@ -240,14 +240,14 @@ export default function SkillDetailPage() {
             {isOwner && (
               isDeleting ? (
                 <div className="flex items-center gap-4 text-xs">
-                  <span className="text-text-secondary">Delete this skill?</span>
+                  <span className="text-text-secondary">Delete this agent?</span>
                   <button type="button" onClick={confirmDelete} className="text-error font-bold uppercase tracking-widest">Confirm</button>
                   <button type="button" onClick={() => setIsDeleting(false)} className="text-text-tertiary uppercase tracking-widest">Cancel</button>
                 </div>
               ) : (
                 <button type="button" onClick={() => setIsDeleting(true)}
                   className="text-error hover:opacity-80 border border-error/30 px-3 py-1 transition-colors">
-                  Delete Skill
+                  Delete Agent
                 </button>
               )
             )}
@@ -273,7 +273,7 @@ export default function SkillDetailPage() {
                 <div className="space-y-6">
                   {inputFields.map(field => (
                     <div key={field.name}>
-                      <label htmlFor={`input-${field.name}`} className="block text-xs uppercase tracking-widest text-text-secondary mb-3">
+                      <label htmlFor={`input-${field.name}`} className="block text-xs uppercase tracking-widest font-bold text-text-secondary mb-3">
                         {field.name} {field.required && <span className="text-accent">*</span>}
                       </label>
                       <input id={`input-${field.name}`} type={field.type} value={inputs[field.name] || ''}
@@ -285,7 +285,7 @@ export default function SkillDetailPage() {
                 </div>
               ) : (
                 <div>
-                  <label htmlFor="input-query" className="block text-xs uppercase tracking-widest text-text-secondary mb-3">Query</label>
+                  <label htmlFor="input-query" className="block text-xs uppercase tracking-widest font-bold text-text-secondary mb-3">Query</label>
                   <textarea id="input-query" value={inputs._query || ''}
                     onChange={e => setInputs(prev => ({ ...prev, _query: e.target.value }))}
                     placeholder="Enter your query..."
@@ -436,7 +436,7 @@ export default function SkillDetailPage() {
           {/* Rating */}
           {address && chatHistory.length > 0 && (
             <div className="mt-8 border border-border-subtle bg-surface-elevated p-6 flex items-center gap-6">
-              <span className="text-xs uppercase tracking-widest text-text-secondary">Rate this skill:</span>
+              <span className="text-xs uppercase tracking-widest text-text-secondary">Rate this agent:</span>
               <div className="flex gap-2">
                 {[1, 2, 3, 4, 5].map(star => (
                   <button key={star} onClick={() => handleRate(star)}

@@ -123,7 +123,7 @@ export default function SettingsPage() {
         })
         .finally(() => setPendingOp(null))
     }
-  }, [txSuccess]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [txSuccess, address, refetchAllowance, refetchBalance, signMessageAsync]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleApprove() {
     if (!address) return
@@ -168,11 +168,11 @@ export default function SettingsPage() {
 
   return (
     <div className="bg-background min-h-screen text-text-primary">
-      <div className="max-w-[1920px] mx-auto px-24 pt-24 pb-32">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 lg:px-24 pt-24 pb-32">
         <div className="max-w-2xl mx-auto space-y-16">
           <div>
-            <h1 className="font-display font-bold text-[5rem] leading-[0.95] tracking-tight mb-6">Settings</h1>
-            <p className="text-text-secondary text-lg mb-8">Account & balance management</p>
+            <h1 className="font-display font-bold text-6xl leading-none tracking-tight mb-6">Settings</h1>
+            <p className="font-display italic text-2xl text-text-secondary">Account & balance management</p>
           </div>
 
           {error && (
@@ -213,7 +213,7 @@ export default function SettingsPage() {
                     {step2Done ? '✓' : '03'}
                   </span>
                   <div>
-                    <h3 className="font-display text-2xl mb-1">Run Skills</h3>
+                    <h3 className="font-display text-2xl mb-1">Run Agents</h3>
                     <p className="text-sm text-text-secondary">Charged from platform balance</p>
                   </div>
                 </div>
@@ -239,7 +239,7 @@ export default function SettingsPage() {
                 <div className="px-8 py-4 border-t border-border-subtle bg-surface-dim">
                   <p className="text-xs text-accent uppercase tracking-widest flex items-center gap-2">
                     <span className="material-symbols-outlined text-sm">check_circle</span>
-                    All set. You can start running Skills.
+                    All set. You can start running agents.
                   </p>
                 </div>
               )}
@@ -265,7 +265,7 @@ export default function SettingsPage() {
                     <p className="font-display text-4xl text-accent mb-2">
                       {platformAvailable.toFixed(4)}
                     </p>
-                    <p className="text-xs text-text-tertiary">Available for Skills</p>
+                    <p className="text-xs text-text-tertiary">Available for agents</p>
                   </div>
                 </div>
                 <div className="p-8 bg-surface flex flex-col justify-between">
@@ -311,7 +311,7 @@ export default function SettingsPage() {
               ) : (
                 <div className="space-y-8">
                   <div>
-                    <div className="block text-xs text-text-secondary uppercase tracking-widest mb-4">Select Amount</div>
+                    <div className="block text-xs uppercase tracking-widest font-bold text-text-secondary mb-3">Select Amount</div>
                     <div className="flex gap-2 flex-wrap">
                       {APPROVE_PRESETS.map(preset => (
                         <button
@@ -342,7 +342,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="approve-amount" className="block text-xs text-text-secondary uppercase tracking-widest mb-4">Custom Amount</label>
+                    <label htmlFor="approve-amount" className="block text-xs uppercase tracking-widest font-bold text-text-secondary mb-3">Custom Amount</label>
                     <div className="flex gap-4 items-stretch">
                       <div className="relative flex-1">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary">$</span>
@@ -356,14 +356,14 @@ export default function SettingsPage() {
                           className="w-full bg-surface-dim border border-border-subtle pl-8 pr-4 py-4 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none disabled:text-text-tertiary transition-colors"
                         />
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleApprove}
-                        disabled={isLoading || (!approveAmount || (approveAmount !== 'max' && Number(approveAmount) <= 0))}
-                        className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 py-4 hover:bg-text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                      >
-                        {isApproving ? 'Approving...' : approved ? 'Approved ✓' : 'Authorize'}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={handleApprove}
+                          disabled={isLoading || (!approveAmount || (approveAmount !== 'max' && Number(approveAmount) <= 0))}
+                          className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 py-4 hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        >
+                          {isApproving ? 'Approving...' : approved ? 'Approved ✓' : 'Authorize'}
+                        </button>
                     </div>
                   </div>
 
@@ -402,78 +402,78 @@ export default function SettingsPage() {
               </span>
               <div>
                 <h2 className="font-display text-2xl">Deposit funds to platform</h2>
-                <p className="text-sm text-text-secondary mt-1">Deposited funds appear as your platform balance — Skills are charged from here</p>
-              </div>
-            </div>
-
-            <div className="p-8">
-              {!isConnected ? (
-                <p className="text-text-secondary text-sm">Connect your wallet to continue</p>
-              ) : !step1Done ? (
-                <p className="text-text-secondary text-sm">Complete step 1 (Authorize) first</p>
-              ) : (
-                <div className="space-y-8">
-                  <div>
-                    <div className="block text-xs text-text-secondary uppercase tracking-widest mb-4">Select Amount</div>
-                    <div className="flex gap-2 flex-wrap">
-                      {DEPOSIT_PRESETS.map(preset => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setDepositAmount(String(preset))}
-                          className={`px-6 py-3 text-sm font-sans uppercase tracking-widest border transition-colors ${
-                            depositAmount === String(preset)
-                              ? 'border-accent text-accent'
-                              : 'border-border-strong text-text-secondary hover:text-text-primary hover:border-text-tertiary'
-                          }`}
-                        >
-                          ${preset}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="deposit-amount" className="block text-xs text-text-secondary uppercase tracking-widest mb-4">Custom Amount</label>
-                    <div className="flex gap-4 items-stretch">
-                      <div className="relative flex-1">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary">$</span>
-                        <input
-                          id="deposit-amount"
-                          type="number"
-                          value={depositAmount}
-                          onChange={e => setDepositAmount(e.target.value)}
-                          min="1"
-                          className="w-full bg-surface-dim border border-border-subtle pl-8 pr-16 py-4 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none transition-colors"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-text-secondary uppercase tracking-widest">USDC</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleDeposit}
-                        disabled={isDepositing || !depositAmount || Number(depositAmount) <= 0}
-                        className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 py-4 hover:bg-text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                      >
-                        {isDepositing ? 'Depositing...' : depositSuccess ? 'Deposited ✓' : 'Deposit'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm pt-4 border-t border-border-subtle">
-                    <span className="text-text-secondary uppercase tracking-widest text-xs">Platform balance:</span>
-                    <span className={`font-mono ${step2Done ? 'text-accent' : 'text-text-tertiary'}`}>
-                      ${platformAvailable.toFixed(4)} USDC
-                    </span>
-                  </div>
-
-                  <div className="bg-surface-dim border border-border-subtle p-6 text-xs text-text-secondary space-y-2">
-                    <p className="flex gap-2"><span className="text-text-tertiary">—</span> Approve only grants permission — it does not move any funds</p>
-                    <p className="flex gap-2"><span className="text-text-tertiary">—</span> Deposit moves USDC into the platform so you can run Skills</p>
-                    <p className="flex gap-2"><span className="text-text-tertiary">—</span> Each Skill execution is charged from your platform balance</p>
+                    <p className="text-sm text-text-secondary mt-1">Deposited funds appear as your platform balance — agents are charged from here</p>
                   </div>
                 </div>
-              )}
-            </div>
+
+                <div className="p-8">
+                  {!isConnected ? (
+                    <p className="text-text-secondary text-sm">Connect your wallet to continue</p>
+                  ) : !step1Done ? (
+                    <p className="text-text-secondary text-sm">Complete step 1 (Authorize) first</p>
+                  ) : (
+                    <div className="space-y-8">
+                      <div>
+                        <div className="block text-xs uppercase tracking-widest font-bold text-text-secondary mb-3">Select Amount</div>
+                        <div className="flex gap-2 flex-wrap">
+                          {DEPOSIT_PRESETS.map(preset => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => setDepositAmount(String(preset))}
+                              className={`px-6 py-3 text-sm font-sans uppercase tracking-widest border transition-colors ${
+                                depositAmount === String(preset)
+                                  ? 'border-accent text-accent'
+                                  : 'border-border-strong text-text-secondary hover:text-text-primary hover:border-text-tertiary'
+                              }`}
+                            >
+                              ${preset}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="deposit-amount" className="block text-xs uppercase tracking-widest font-bold text-text-secondary mb-3">Custom Amount</label>
+                        <div className="flex gap-4 items-stretch">
+                          <div className="relative flex-1">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary">$</span>
+                            <input
+                              id="deposit-amount"
+                              type="number"
+                              value={depositAmount}
+                              onChange={e => setDepositAmount(e.target.value)}
+                              min="1"
+                              className="w-full bg-surface-dim border border-border-subtle pl-8 pr-16 py-4 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none transition-colors"
+                            />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-text-secondary uppercase tracking-widest">USDC</span>
+                          </div>
+                            <button
+                              type="button"
+                              onClick={handleDeposit}
+                              disabled={isDepositing || !depositAmount || Number(depositAmount) <= 0}
+                              className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 py-4 hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            >
+                              {isDepositing ? 'Depositing...' : depositSuccess ? 'Deposited ✓' : 'Deposit'}
+                            </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-sm pt-4 border-t border-border-subtle">
+                        <span className="text-text-secondary uppercase tracking-widest text-xs">Platform balance:</span>
+                        <span className={`font-mono ${step2Done ? 'text-accent' : 'text-text-tertiary'}`}>
+                          ${platformAvailable.toFixed(4)} USDC
+                        </span>
+                      </div>
+
+                      <div className="bg-surface-dim border border-border-subtle p-6 text-xs text-text-secondary space-y-2">
+                        <p className="flex gap-2"><span className="text-text-tertiary">—</span> Approve only grants permission — it does not move any funds</p>
+                        <p className="flex gap-2"><span className="text-text-tertiary">—</span> Deposit moves USDC into the platform so you can run agents</p>
+                        <p className="flex gap-2"><span className="text-text-tertiary">—</span> Each agent execution is charged from your platform balance</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
           </section>
 
           <section className="border border-border-subtle">
@@ -482,29 +482,29 @@ export default function SettingsPage() {
             </div>
             
             <div className="p-8 space-y-8">
-              <div>
-                <label htmlFor="display-name" className="block text-xs text-text-secondary uppercase tracking-widest mb-2">Display name</label>
-                <input
-                  id="display-name"
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  placeholder="Enter your display name"
-                  className="w-full bg-surface-dim border border-border-subtle px-4 py-4 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none transition-colors"
-                />
-              </div>
-              <div>
-                <div className="block text-xs text-text-secondary uppercase tracking-widest mb-2">Wallet address</div>
-                <div className="bg-surface-dim border border-border-subtle px-4 py-4 text-text-tertiary font-mono text-sm break-all">
-                  {address || 'No wallet connected'}
+                <div>
+                  <label htmlFor="display-name" className="block text-xs uppercase tracking-widest font-bold text-text-secondary mb-3">Display name</label>
+                  <input
+                    id="display-name"
+                    value={displayName}
+                    onChange={e => setDisplayName(e.target.value)}
+                    placeholder="Enter your display name"
+                    className="w-full bg-surface-dim border border-border-subtle px-4 py-4 text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none transition-colors"
+                  />
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={saveProfile}
-                className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 py-4 hover:bg-text-secondary transition-colors text-sm"
-              >
-                {saved ? 'Saved ✓' : 'Save Profile'}
-              </button>
+                <div>
+                  <div className="block text-xs uppercase tracking-widest font-bold text-text-secondary mb-3">Wallet address</div>
+                  <div className="bg-surface-dim border border-border-subtle px-4 py-4 text-text-tertiary font-mono text-sm break-all">
+                    {address || 'No wallet connected'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={saveProfile}
+                  className="bg-text-primary text-surface-elevated font-bold uppercase tracking-widest px-8 py-4 hover:bg-accent transition-colors text-sm"
+                >
+                  {saved ? 'Saved ✓' : 'Save Profile'}
+                </button>
             </div>
           </section>
         </div>
