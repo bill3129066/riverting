@@ -93,7 +93,11 @@ export default function SessionPage() {
     if (typeof window === 'undefined' || !id) return
     const storageKey = `session_query_${id}`
     const q = sessionStorage.getItem(storageKey)
-    if (q) initialQueryRef.current = q
+    if (q) {
+      initialQueryRef.current = q
+    } else {
+      setPhase('chat')
+    }
   }, [id])
 
   useEffect(() => {
