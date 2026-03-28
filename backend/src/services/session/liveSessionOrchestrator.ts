@@ -2,6 +2,7 @@ import { getDb } from '../../db/client.js'
 import { randomUUID } from 'crypto'
 import { canTransition, BILLING_STATES, PROOF_STATES, type SessionState } from './sessionStateMachine.js'
 import { chatWithAgent } from '../agent/agentExecutor.js'
+import { incrementRunCount } from '../agent/agentRegistry.js'
 import { reserveDeposit, accrueCharge, settleSession } from './billingService.js'
 import { sseHub } from '../realtime/sseHub.js'
 
@@ -225,6 +226,7 @@ export function startSession(
   startProofInterval(session)
   startMockStepInterval(session)
   activeSessions.set(sessionId, session)
+  incrementRunCount(agentId)
 
   console.log(
     `[Orchestrator] Session ${sessionId} started for agent ${agentId} at ${ratePerSecond} micro-USDC/s`,
