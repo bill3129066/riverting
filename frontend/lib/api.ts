@@ -14,8 +14,11 @@ export async function fetchAgent(id: string) {
   return res.json()
 }
 
-export async function fetchSessions() {
-  const res = await fetch(`${API_BASE}/api/sessions`)
+export async function fetchSessions(wallet?: string) {
+  const url = wallet
+    ? `${API_BASE}/api/sessions?wallet=${wallet.toLowerCase()}`
+    : `${API_BASE}/api/sessions`
+  const res = await fetch(url)
   if (!res.ok) throw new Error('Failed to fetch sessions')
   return res.json()
 }

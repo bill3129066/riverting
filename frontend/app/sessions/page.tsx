@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useAccount } from 'wagmi'
 import { fetchSessions } from '@/lib/api'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -23,16 +24,23 @@ function formatDuration(createdAt: string, endedAt: string | null) {
 }
 
 export default function SessionsPage() {
+  const { address, isConnected } = useAccount()
   const [sessions, setSessions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchSessions()
+    if (!isConnected || !address) {
+      setLoading(false)
+      setSessions([])
+      return
+    }
+    setLoading(true)
+    fetchSessions(address)
       .then(setSessions)
       .catch((e: any) => setError(e.message || 'Failed to fetch sessions'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [isConnected, address])
 
   return (
     <div className="bg-background min-h-screen text-text-primary">
@@ -56,14 +64,24 @@ export default function SessionsPage() {
           </Link>
         </div>
 
-        {error && (
+        {!isConnected && (
+          <div className="bg-surface-dim p-24 flex flex-col items-center justify-center text-center">
+            <span className="material-symbols-outlined text-4xl text-text-tertiary mb-6">account_balance_wallet</span>
+            <h3 className="font-display text-3xl mb-4 italic">Connect your wallet</h3>
+            <p className="text-text-secondary mb-8 max-w-md">
+              Connect your wallet to view your session history.
+            </p>
+          </div>
+        )}
+
+        {isConnected && error && (
           <div className="flex items-center justify-between border border-error/30 bg-error/5 px-6 py-3 mb-8">
             <p className="text-error text-sm">{error}</p>
             <button type="button" onClick={() => setError(null)} className="text-error hover:text-text-primary text-sm transition-colors">&times;</button>
           </div>
         )}
 
-        {loading ? (
+        {isConnected && loading ? (
           <div className="space-y-8 border-t border-border-subtle">
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse border-b border-border-subtle py-8 flex flex-col px-8">
@@ -73,7 +91,7 @@ export default function SessionsPage() {
               </div>
             ))}
           </div>
-        ) : sessions.length === 0 ? (
+        ) : isConnected && sessions.length === 0 ? (
           <div className="bg-surface-dim p-24 flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-4xl text-text-tertiary mb-6">stream</span>
             <h3 className="font-display text-3xl mb-4 italic">No sessions yet</h3>
@@ -84,7 +102,7 @@ export default function SessionsPage() {
               Browse agents and start your first session &rarr;
             </Link>
           </div>
-        ) : (
+        ) : isConnected && sessions.length > 0 ? (
           <div className="flex flex-col border-t border-border-subtle">
             {sessions.map((s) => (
               <Link
@@ -113,7 +131,7 @@ export default function SessionsPage() {
               </Link>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )

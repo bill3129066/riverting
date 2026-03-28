@@ -40,7 +40,7 @@ export default function UploadAgentPage() {
     category: 'general',
     systemPrompt: '',
     userPromptTemplate: '',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3-flash-preview',
     temperature: '0.3',
     maxTokens: '1024',
     ratePerSecond: '0',
@@ -427,9 +427,8 @@ export default function UploadAgentPage() {
               <div>
                 <label className={labelCls}>Model</label>
                 <select value={form.model} onChange={update('model')} className={inputCls}>
-                  <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                  <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
                 </select>
               </div>
             </div>
