@@ -349,14 +349,10 @@ export default function SessionPage() {
         />
       )}
 
-      <motion.div
-        initial={false}
-        animate={{
-          opacity: isDeliberating ? 0 : 1,
-          y: isDeliberating ? 40 : 0,
-        }}
+      {!isDeliberating && <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: EASING }}
-        style={{ pointerEvents: isDeliberating ? 'none' : 'auto' }}
       >
         <div className="grid grid-cols-12 gap-8 items-start">
           <div className="col-span-3 space-y-8">
@@ -459,7 +455,7 @@ export default function SessionPage() {
             </button>
           </div>
         </div>
-      </motion.div>
+      </motion.div>}
 
       {showReview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
