@@ -49,7 +49,7 @@ function seedAgents(): void {
       $system_prompt: JSON.stringify({
         analysisTemplates: ['pool-snapshot'],
       }),
-      $model: 'gemini-3.1-pro-preview',
+      $model: 'gemini-3.1-pro-preview', $maxTokens: 4096,
       $temperature: 0.2,
       $tools_json: JSON.stringify([{ type: 'onchainos-market', description: 'Fetch pool data' }]),
     },
@@ -62,7 +62,7 @@ function seedAgents(): void {
       $system_prompt: JSON.stringify({
         analysisTemplates: ['yield-compare'],
       }),
-      $model: 'gemini-3.1-pro-preview',
+      $model: 'gemini-3.1-pro-preview', $maxTokens: 4096,
       $temperature: 0.2,
       $tools_json: JSON.stringify([{ type: 'onchainos-market', description: 'Fetch yield data' }]),
     },
@@ -167,7 +167,7 @@ function seedSkillsFromDir(): number {
         $userPromptTemplate: '{{query}}\n\nChain: {{chain}}\nTarget: {{address}}',
         $model: 'gemini-3.1-pro-preview',
         $temperature: 0.2,
-        $maxTokens: enableTools ? 4096 : 2048,
+        $maxTokens: 4096,
         $inputSchema: defaultSchema,
         $toolsJson: enableTools ? RPC_TOOLS : null,
       });
@@ -194,7 +194,7 @@ function seedSkillsFromDir(): number {
           $userPromptTemplate: '{{query}}\n\nTarget: {{address}}\nChain: {{chain}}',
           $model: 'gemini-3.1-pro-preview',
           $temperature: 0.2,
-          $maxTokens: enableTools ? 4096 : 2048,
+          $maxTokens: 4096,
           $inputSchema: defaultSchema,
           $toolsJson: enableTools ? RPC_TOOLS : null,
         });

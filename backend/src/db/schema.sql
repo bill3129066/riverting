@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS agents (
   user_prompt_template TEXT,
   model TEXT NOT NULL DEFAULT 'gemini-3.1-pro-preview',
   temperature REAL NOT NULL DEFAULT 0.3,
-  max_tokens INTEGER NOT NULL DEFAULT 1024,
+  max_tokens INTEGER NOT NULL DEFAULT 4096,
   tools_json TEXT,
   input_schema_json TEXT,
   rate_per_second INTEGER NOT NULL DEFAULT 0,

@@ -58,7 +58,7 @@ export function createAgent(input: CreateAgentInput): AgentRow {
     $userPromptTemplate: input.userPromptTemplate ?? null,
     $model: input.model ?? 'gemini-3.1-pro-preview',
     $temperature: input.temperature ?? 0.3,
-    $maxTokens: input.maxTokens ?? 1024,
+    $maxTokens: input.maxTokens ?? 4096,
     $toolsJson: input.toolsJson ?? null,
     $inputSchemaJson: input.inputSchemaJson ?? null,
     $ratePerSecond: input.ratePerSecond ?? 0,

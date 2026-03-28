@@ -99,21 +99,21 @@ export class ProofRelayer {
     proofSeqs.set(session.id, seq)
     lastProofTimes.set(session.id, now)
 
-    sseHub.emitProof(session.id, {
-      seq,
-      proofHash,
-      txHash: txHash || undefined,
-      ts: new Date().toISOString(),
-    })
+    if (txHash) {
+      sseHub.emitProof(session.id, {
+        seq,
+        proofHash,
+        txHash,
+        ts: new Date().toISOString(),
+      })
 
-    sseHub.emitStep(session.id, {
-      kind: 'commentary',
-      title: 'Agent working...',
-      body: `Analyzing session ${session.id} — proof #${seq} submitted`,
-      ts: new Date().toISOString(),
-    })
-
-    sseHub.emitEarnings(session.id, seq * 4)
+      sseHub.emitStep(session.id, {
+        kind: 'metric',
+        title: 'Heartbeat OK',
+        body: `Proof #${seq} anchored`,
+        ts: new Date().toISOString(),
+      })
+    }
   }
 
   startProofLoop(_sessionId: string) {

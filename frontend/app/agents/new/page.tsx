@@ -42,7 +42,7 @@ export default function UploadAgentPage() {
     userPromptTemplate: '',
     model: 'gemini-3-flash-preview',
     temperature: '0.3',
-    maxTokens: '1024',
+    maxTokens: '4096',
     ratePerSecond: '0',
     metadataUri: '',
   })
