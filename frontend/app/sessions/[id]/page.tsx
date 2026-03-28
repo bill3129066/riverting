@@ -118,10 +118,16 @@ export default function SessionPage() {
           setStatus(session.status)
         }
         if (session.started_at) {
-          sessionStartRef.current = new Date(session.started_at).getTime()
+          sessionStartRef.current = new Date(session.started_at + 'Z').getTime()
         }
         if (session.ended_at) {
-          sessionEndRef.current = new Date(session.ended_at).getTime()
+          sessionEndRef.current = new Date(session.ended_at + 'Z').getTime()
+        }
+        if (session.status !== 'active' && session.started_at && session.total_rate) {
+          const start = new Date(session.started_at + 'Z').getTime()
+          const end = session.ended_at ? new Date(session.ended_at + 'Z').getTime() : Date.now()
+          const durationSec = Math.floor((end - start) / 1000)
+          setAccrued(durationSec * session.total_rate)
         }
       })
       .catch(() => {})
@@ -348,22 +354,29 @@ export default function SessionPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: EASING }}
       >
-        <div className="grid grid-cols-12 gap-8 items-start">
-          <div className="col-span-3 space-y-8">
+        {status === 'active' ? (
+          <div className="grid grid-cols-12 gap-8 items-start">
+            <div className="col-span-3 space-y-8">
+              <SalaryTicker accrued={accrued} ratePerSec={ratePerSec} status={status} />
+              <CostBreakdown curatorRate={curatorRate} platformFee={platformFee} />
+            </div>
+
+            <div className="col-span-6 h-full min-h-[40rem]">
+              <AgentWorkTimeline steps={steps} />
+            </div>
+
+            <div className="col-span-3 h-full max-h-[40rem]">
+              <ProofHeartbeatTimeline proofs={proofs} />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-8 mb-8">
             <SalaryTicker accrued={accrued} ratePerSec={ratePerSec} status={status} />
             <CostBreakdown curatorRate={curatorRate} platformFee={platformFee} />
           </div>
+        )}
 
-          <div className="col-span-6 h-full min-h-[40rem]">
-            <AgentWorkTimeline steps={steps} />
-          </div>
-
-          <div className="col-span-3 h-full max-h-[40rem]">
-            <ProofHeartbeatTimeline proofs={proofs} />
-          </div>
-        </div>
-
-        <div className="mt-16 border border-border-subtle bg-surface-elevated flex flex-col h-[36rem] overflow-hidden shadow-2xl shadow-black/5">
+        <div className={`${status === 'active' ? 'mt-16' : 'mt-0'} border border-border-subtle bg-surface-elevated flex flex-col h-[36rem] overflow-hidden shadow-2xl shadow-black/5`}>
           <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-border-subtle bg-surface">
             <p className="text-xs text-text-tertiary uppercase tracking-widest font-bold">
               Chat with Agent
