@@ -85,6 +85,7 @@ export default function SessionPage() {
 
   const chatBottomRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+  const sseStoppedRef = useRef(false)
   const initialQuerySentRef = useRef(false)
   const initialQueryRef = useRef<string | null>(null)
   const isValidSession = !!id && id !== 'new'
@@ -116,6 +117,7 @@ export default function SessionPage() {
         if (session.agent_id) setAgentId(session.agent_id)
         if (session.status && ['active', 'paused', 'stopped'].includes(session.status)) {
           setStatus(session.status)
+          if (session.status === 'stopped') sseStoppedRef.current = true
         }
         if (session.started_at) {
           sessionStartRef.current = new Date(session.started_at + 'Z').getTime()
@@ -225,7 +227,9 @@ export default function SessionPage() {
 
       es.onerror = () => {
         es.close()
-        setTimeout(connect, 3000)
+        if (!sseStoppedRef.current) {
+          setTimeout(connect, 3000)
+        }
       }
     }
 
@@ -252,6 +256,7 @@ export default function SessionPage() {
       await stopSession(id, auth)
       setStatus('stopped')
       sessionEndRef.current = Date.now()
+      sseStoppedRef.current = true
       eventSourceRef.current?.close()
       setShowReview(true)
     } catch (e: any) {
