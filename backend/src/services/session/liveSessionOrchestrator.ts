@@ -287,6 +287,11 @@ export async function chatInSession(
     (step) => sseHub.emitStep(sessionId, step),
   )
 
+  if (result.reply) {
+    sseHub.emitChunk(sessionId, result.reply)
+    sseHub.emitComplete(sessionId)
+  }
+
   return { reply: result.reply, toolCallCount: result.toolCallCount }
 }
 
