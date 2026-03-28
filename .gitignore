@@ -51,6 +51,10 @@ npm-debug.log*
 *.pem
 credentials.json
 
+# AI development artifacts
+.sisyphus/
+.impeccable.md
+
 # Runtime generated
 backend/proof-packages/
 backend/dev.db

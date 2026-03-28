@@ -1,2 +1,0 @@
-- No unresolved technical blockers for Task 2.
-- Open follow-up for Task 3: decide whether to keep `nextAgentId` starting at `0` or migrate to sentinel-style `1+` and update tests/spec coherently.
